@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<!-- saved from url=(0049)https://www.cnblogs.com/dogecheng/p/11911909.html -->
+<html lang="zh-cn"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="origin-when-crossorigin">
+    <meta name="description" content="本文是《手把手教你用Pytorch-Transformers》的第二篇，主要讲实战 手把手教你用Pytorch-Transformers——部分源码解读及相关说明（一） 使用 PyTorch 的可以结">
+    <meta property="og:description" content="本文是《手把手教你用Pytorch-Transformers》的第二篇，主要讲实战 手把手教你用Pytorch-Transformers——部分源码解读及相关说明（一） 使用 PyTorch 的可以结">
+    <meta http-equiv="Cache-Control" content="no-transform">
+    <meta http-equiv="Cache-Control" content="no-siteapp">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>手把手教你用Pytorch-Transformers——实战（二） - 那少年和狗 - 博客园</title>
+    <link id="favicon" rel="shortcut icon" href="https://common.cnblogs.com/favicon.svg" type="image/svg+xml">
+    
+    <link rel="stylesheet" href="./手把手教你用Pytorch-Transformers（二）——实战_files/blog-common.min.css">
+    <link id="MainCss" rel="stylesheet" href="./手把手教你用Pytorch-Transformers（二）——实战_files/bundle-custom.min.css">
+    <link type="text/css" rel="stylesheet" href="./手把手教你用Pytorch-Transformers（二）——实战_files/custom.css">
+    <link id="mobile-style" media="only screen and (max-width: 767px)" type="text/css" rel="stylesheet" href="./手把手教你用Pytorch-Transformers（二）——实战_files/bundle-custom-mobile.min.css">
+    
+    <link type="application/rss+xml" rel="alternate" href="https://www.cnblogs.com/dogecheng/rss">
+    <link type="application/rsd+xml" rel="EditURI" href="https://www.cnblogs.com/dogecheng/rsd.xml">
+    <link type="application/wlwmanifest+xml" rel="wlwmanifest" href="https://www.cnblogs.com/dogecheng/wlwmanifest.xml">
+    <script src="./手把手教你用Pytorch-Transformers（二）——实战_files/osd.js.下载"></script><script async="" src="./手把手教你用Pytorch-Transformers（二）——实战_files/analytics.js.下载"></script><script type="text/javascript" src="./手把手教你用Pytorch-Transformers（二）——实战_files/encoder.js.下载"></script><script>
+        var currentBlogId = 537307;
+        var currentBlogApp = 'dogecheng';
+        var cb_enable_mathjax = true;
+        var isLogined = false;
+        var isBlogOwner = false;
+        var skinName = 'Custom';
+        var visitorUserId = '';
+    </script>
+        <script>
+            var currentPostDateAdded = '2019-12-02 11:05';
+        </script>
+    <script src="./手把手教你用Pytorch-Transformers（二）——实战_files/jquery-2.2.0.min.js.下载"></script>
+    <script src="./手把手教你用Pytorch-Transformers（二）——实战_files/blog-common.min.js.下载"></script><style type="text/css">.medium-zoom-overlay{position:fixed;top:0;right:0;bottom:0;left:0;opacity:0;transition:opacity .3s;will-change:opacity}.medium-zoom--opened .medium-zoom-overlay{cursor:pointer;cursor:zoom-out;opacity:1}.medium-zoom-image{cursor:pointer;cursor:zoom-in;transition:transform .3s cubic-bezier(.2,0,.2,1)!important}.medium-zoom-image--hidden{visibility:hidden}.medium-zoom-image--opened{position:relative;cursor:pointer;cursor:zoom-out;will-change:transform}</style>
+    <script type="text/x-mathjax-config;executed=true">
+        MathJax.Hub.Config({
+        tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']], processClass: 'math', processEscapes: true },
+        TeX: {
+        equationNumbers: { autoNumber: ['AMS'], useLabelIds: true },
+        extensions: ['extpfeil.js', 'mediawiki-texvc.js'],
+        Macros: {bm: "\\boldsymbol"}
+        },
+        'HTML-CSS': { linebreaks: { automatic: true } },
+        SVG: { linebreaks: { automatic: true } }
+        });
+    </script>
+    <script src="./手把手教你用Pytorch-Transformers（二）——实战_files/MathJax.js.下载"></script>
+    
+<style type="text/css">.MathJax_Hover_Frame {border-radius: .25em; -webkit-border-radius: .25em; -moz-border-radius: .25em; -khtml-border-radius: .25em; box-shadow: 0px 0px 15px #83A; -webkit-box-shadow: 0px 0px 15px #83A; -moz-box-shadow: 0px 0px 15px #83A; -khtml-box-shadow: 0px 0px 15px #83A; border: 1px solid #A6D ! important; display: inline-block; position: absolute}
+.MathJax_Menu_Button .MathJax_Hover_Arrow {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; -khtml-border-radius: 4px; font-family: 'Courier New',Courier; font-size: 9px; color: #F0F0F0}
+.MathJax_Menu_Button .MathJax_Hover_Arrow span {display: block; background-color: #AAA; border: 1px solid; border-radius: 3px; line-height: 0; padding: 4px}
+.MathJax_Hover_Arrow:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_Hover_Arrow:hover span {background-color: #CCC!important}
+</style><style type="text/css">#MathJax_About {position: fixed; left: 50%; width: auto; text-align: center; border: 3px outset; padding: 1em 2em; background-color: #DDDDDD; color: black; cursor: default; font-family: message-box; font-size: 120%; font-style: normal; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 15px; -webkit-border-radius: 15px; -moz-border-radius: 15px; -khtml-border-radius: 15px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_About.MathJax_MousePost {outline: none}
+.MathJax_Menu {position: absolute; background-color: white; color: black; width: auto; padding: 2px; border: 1px solid #CCCCCC; margin: 0; cursor: default; font: menu; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+.MathJax_MenuItem {padding: 2px 2em; background: transparent}
+.MathJax_MenuArrow {position: absolute; right: .5em; padding-top: .25em; color: #666666; font-size: .75em}
+.MathJax_MenuActive .MathJax_MenuArrow {color: white}
+.MathJax_MenuArrow.RTL {left: .5em; right: auto}
+.MathJax_MenuCheck {position: absolute; left: .7em}
+.MathJax_MenuCheck.RTL {right: .7em; left: auto}
+.MathJax_MenuRadioCheck {position: absolute; left: 1em}
+.MathJax_MenuRadioCheck.RTL {right: 1em; left: auto}
+.MathJax_MenuLabel {padding: 2px 2em 4px 1.33em; font-style: italic}
+.MathJax_MenuRule {border-top: 1px solid #CCCCCC; margin: 4px 1px 0px}
+.MathJax_MenuDisabled {color: GrayText}
+.MathJax_MenuActive {background-color: Highlight; color: HighlightText}
+.MathJax_MenuDisabled:focus, .MathJax_MenuLabel:focus {background-color: #E8E8E8}
+.MathJax_ContextMenu:focus {outline: none}
+.MathJax_ContextMenu .MathJax_MenuItem:focus {outline: none}
+#MathJax_AboutClose {top: .2em; right: .2em}
+.MathJax_Menu .MathJax_MenuClose {top: -10px; left: -10px}
+.MathJax_MenuClose {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; font-family: 'Courier New',Courier; font-size: 24px; color: #F0F0F0}
+.MathJax_MenuClose span {display: block; background-color: #AAA; border: 1.5px solid; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; line-height: 0; padding: 8px 0 6px}
+.MathJax_MenuClose:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_MenuClose:hover span {background-color: #CCC!important}
+.MathJax_MenuClose:hover:focus {outline: none}
+</style><style type="text/css">.MathJax_Preview .MJXf-math {color: inherit!important}
+</style><style type="text/css">.MJX_Assistive_MathML {position: absolute!important; top: 0; left: 0; clip: rect(1px, 1px, 1px, 1px); padding: 1px 0 0 0!important; border: 0!important; height: 1px!important; width: 1px!important; overflow: hidden!important; display: block!important; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none}
+.MJX_Assistive_MathML.MJX_Assistive_MathML_Block {width: 100%!important}
+</style><style type="text/css">#MathJax_Zoom {position: absolute; background-color: #F0F0F0; overflow: auto; display: block; z-index: 301; padding: .5em; border: 1px solid black; margin: 0; font-weight: normal; font-style: normal; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; -webkit-box-sizing: content-box; -moz-box-sizing: content-box; box-sizing: content-box; box-shadow: 5px 5px 15px #AAAAAA; -webkit-box-shadow: 5px 5px 15px #AAAAAA; -moz-box-shadow: 5px 5px 15px #AAAAAA; -khtml-box-shadow: 5px 5px 15px #AAAAAA; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_ZoomOverlay {position: absolute; left: 0; top: 0; z-index: 300; display: inline-block; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+#MathJax_ZoomFrame {position: relative; display: inline-block; height: 0; width: 0}
+#MathJax_ZoomEventTrap {position: absolute; left: 0; top: 0; z-index: 302; display: inline-block; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+</style><style type="text/css">.MathJax_Preview {color: #888}
+#MathJax_Message {position: fixed; left: 1em; bottom: 1.5em; background-color: #E6E6E6; border: 1px solid #959595; margin: 0px; padding: 2px 8px; z-index: 102; color: black; font-size: 80%; width: auto; white-space: nowrap}
+#MathJax_MSIE_Frame {position: absolute; top: 0; left: 0; width: 0px; z-index: 101; border: 0px; margin: 0px; padding: 0px}
+.MathJax_Error {color: #CC0000; font-style: italic}
+</style><style type="text/css">.MJXp-script {font-size: .8em}
+.MJXp-right {-webkit-transform-origin: right; -moz-transform-origin: right; -ms-transform-origin: right; -o-transform-origin: right; transform-origin: right}
+.MJXp-bold {font-weight: bold}
+.MJXp-italic {font-style: italic}
+.MJXp-scr {font-family: MathJax_Script,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-frak {font-family: MathJax_Fraktur,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-sf {font-family: MathJax_SansSerif,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-cal {font-family: MathJax_Caligraphic,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-mono {font-family: MathJax_Typewriter,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-largeop {font-size: 150%}
+.MJXp-largeop.MJXp-int {vertical-align: -.2em}
+.MJXp-math {display: inline-block; line-height: 1.2; text-indent: 0; font-family: 'Times New Roman',Times,STIXGeneral,serif; white-space: nowrap; border-collapse: collapse}
+.MJXp-display {display: block; text-align: center; margin: 1em 0}
+.MJXp-math span {display: inline-block}
+.MJXp-box {display: block!important; text-align: center}
+.MJXp-box:after {content: " "}
+.MJXp-rule {display: block!important; margin-top: .1em}
+.MJXp-char {display: block!important}
+.MJXp-mo {margin: 0 .15em}
+.MJXp-mfrac {margin: 0 .125em; vertical-align: .25em}
+.MJXp-denom {display: inline-table!important; width: 100%}
+.MJXp-denom > * {display: table-row!important}
+.MJXp-surd {vertical-align: top}
+.MJXp-surd > * {display: block!important}
+.MJXp-script-box > *  {display: table!important; height: 50%}
+.MJXp-script-box > * > * {display: table-cell!important; vertical-align: top}
+.MJXp-script-box > *:last-child > * {vertical-align: bottom}
+.MJXp-script-box > * > * > * {display: block!important}
+.MJXp-mphantom {visibility: hidden}
+.MJXp-munderover, .MJXp-munder {display: inline-table!important}
+.MJXp-over {display: inline-block!important; text-align: center}
+.MJXp-over > * {display: block!important}
+.MJXp-munderover > *, .MJXp-munder > * {display: table-row!important}
+.MJXp-mtable {vertical-align: .25em; margin: 0 .125em}
+.MJXp-mtable > * {display: inline-table!important; vertical-align: middle}
+.MJXp-mtr {display: table-row!important}
+.MJXp-mtd {display: table-cell!important; text-align: center; padding: .5em 0 0 .5em}
+.MJXp-mtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-mlabeledtr {display: table-row!important}
+.MJXp-mlabeledtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mlabeledtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-merror {background-color: #FFFF88; color: #CC0000; border: 1px solid #CC0000; padding: 1px 3px; font-style: normal; font-size: 90%}
+.MJXp-scale0 {-webkit-transform: scaleX(.0); -moz-transform: scaleX(.0); -ms-transform: scaleX(.0); -o-transform: scaleX(.0); transform: scaleX(.0)}
+.MJXp-scale1 {-webkit-transform: scaleX(.1); -moz-transform: scaleX(.1); -ms-transform: scaleX(.1); -o-transform: scaleX(.1); transform: scaleX(.1)}
+.MJXp-scale2 {-webkit-transform: scaleX(.2); -moz-transform: scaleX(.2); -ms-transform: scaleX(.2); -o-transform: scaleX(.2); transform: scaleX(.2)}
+.MJXp-scale3 {-webkit-transform: scaleX(.3); -moz-transform: scaleX(.3); -ms-transform: scaleX(.3); -o-transform: scaleX(.3); transform: scaleX(.3)}
+.MJXp-scale4 {-webkit-transform: scaleX(.4); -moz-transform: scaleX(.4); -ms-transform: scaleX(.4); -o-transform: scaleX(.4); transform: scaleX(.4)}
+.MJXp-scale5 {-webkit-transform: scaleX(.5); -moz-transform: scaleX(.5); -ms-transform: scaleX(.5); -o-transform: scaleX(.5); transform: scaleX(.5)}
+.MJXp-scale6 {-webkit-transform: scaleX(.6); -moz-transform: scaleX(.6); -ms-transform: scaleX(.6); -o-transform: scaleX(.6); transform: scaleX(.6)}
+.MJXp-scale7 {-webkit-transform: scaleX(.7); -moz-transform: scaleX(.7); -ms-transform: scaleX(.7); -o-transform: scaleX(.7); transform: scaleX(.7)}
+.MJXp-scale8 {-webkit-transform: scaleX(.8); -moz-transform: scaleX(.8); -ms-transform: scaleX(.8); -o-transform: scaleX(.8); transform: scaleX(.8)}
+.MJXp-scale9 {-webkit-transform: scaleX(.9); -moz-transform: scaleX(.9); -ms-transform: scaleX(.9); -o-transform: scaleX(.9); transform: scaleX(.9)}
+.MathJax_PHTML .noError {vertical-align: ; font-size: 90%; text-align: left; color: black; padding: 1px 3px; border: 1px solid}
+</style><meta http-equiv="origin-trial" content="A+b/H0b8RPXNaJgaNFpO0YOFuGK6myDQXlwnJB3SwzvNMfcndat4DZYMrP4ClJIzYWo3/yP2S+8FTZ/lpqbPAAEAAABueyJvcmlnaW4iOiJodHRwczovL2ltYXNkay5nb29nbGVhcGlzLmNvbTo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzVGhpcmRQYXJ0eSI6dHJ1ZX0="><meta http-equiv="origin-trial" content="A9ZgbRtm4pU3oZiuNzOsKcC8ppFSZdcjP2qYcdQrFKVzkmiWH1kdYY1Mi9x7G8+PS8HV9Ha9Cz0gaMdKsiVZIgMAAAB7eyJvcmlnaW4iOiJodHRwczovL2RvdWJsZWNsaWNrLm5ldDo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AxL6oBxcpn5rQDPKSAs+d0oxNyJYq2/4esBUh3Yx5z8QfcLu+AU8iFCXYRcr/CEEfDnkxxLTsvXPJFQBxHfvkgMAAACBeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXRhZ3NlcnZpY2VzLmNvbTo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="A9KPtG5kl3oLTk21xqynDPGQ5t18bSOpwt0w6kGa6dEWbuwjpffmdUpR3W+faZDubGT+KIk2do0BX2ca16x8qAcAAACBeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXN5bmRpY2F0aW9uLmNvbTo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="A3HucHUo1oW9s+9kIKz8mLkbcmdaj5lxt3eiIMp1Nh49dkkBlg1Fhg4Fd/r0vL69mRRA36YutI9P/lJUfL8csQoAAACFeyJvcmlnaW4iOiJodHRwczovL2RvdWJsZWNsaWNrLm5ldDo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1N1YmRvbWFpbiI6dHJ1ZSwiaXNUaGlyZFBhcnR5Ijp0cnVlfQ=="><meta http-equiv="origin-trial" content="A0OysezhLoCRYomumeYlubLurZTCmsjTb087OvtCy95jNM65cfEsbajrJnhaGwiTxhz38ZZbm+UhUwQuXfVPTg0AAACLeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXN5bmRpY2F0aW9uLmNvbTo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1N1YmRvbWFpbiI6dHJ1ZSwiaXNUaGlyZFBhcnR5Ijp0cnVlfQ=="><meta http-equiv="origin-trial" content="AxoOxdZQmIoA1WeAPDixRAeWDdgs7ZtVFfH2y19ziTgD1iaHE5ZGz2UdSjubkWvob9C5PrjUfkWi4ZSLgWk3Xg8AAACLeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXRhZ3NlcnZpY2VzLmNvbTo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1N1YmRvbWFpbiI6dHJ1ZSwiaXNUaGlyZFBhcnR5Ijp0cnVlfQ=="><meta http-equiv="origin-trial" content="A7+rMYR5onPnACrz+niKSeFdH3xw1IyHo2AZSHmxrofRk9w4HcQPMYcpBUKu6OQ6zsdxf4m/vqa6tG6Na4OLpAQAAAB4eyJvcmlnaW4iOiJodHRwczovL2ltYXNkay5nb29nbGVhcGlzLmNvbTo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AwfG8hAcHnPa/kJ1Co0EvG/K0F9l1s2JZGiDLt2mhC3QI5Fh4qmsmSwrWObZFbRC9ieDaSLU6lHRxhGUF/i9sgoAAACBeyJvcmlnaW4iOiJodHRwczovL2RvdWJsZWNsaWNrLm5ldDo0NDMiLCJmZWF0dXJlIjoiSW50ZXJlc3RDb2hvcnRBUEkiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AwQ7dCmHkvR6FuOFxAuNnktYSQrGbL4dF+eBkrwNLALc69Wr//PnO1yzns3pjUoCaYbKHtVcnng2hU+8OUm0PAYAAACHeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXN5bmRpY2F0aW9uLmNvbTo0NDMiLCJmZWF0dXJlIjoiSW50ZXJlc3RDb2hvcnRBUEkiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AysVDPGQTLD/Scn78x4mLwB1tMfje5jwUpAAzGRpWsr1NzoN7MTFhT3ClmImi2svDZA7V6nWGIV8YTPsSRTe0wYAAACHeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXRhZ3NlcnZpY2VzLmNvbTo0NDMiLCJmZWF0dXJlIjoiSW50ZXJlc3RDb2hvcnRBUEkiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><script src="./手把手教你用Pytorch-Transformers（二）——实战_files/pubads_impl_2021060301.js.下载" async=""></script><link rel="stylesheet" href="./手把手教你用Pytorch-Transformers（二）——实战_files/lightbox.min.css"><link rel="preload" href="./手把手教你用Pytorch-Transformers（二）——实战_files/f.txt" as="script"><script type="text/javascript" src="./手把手教你用Pytorch-Transformers（二）——实战_files/f.txt"></script><link rel="prefetch" href="https://469f353bb44715c03e4d67e51df1edd0.safeframe.googlesyndication.com/safeframe/1-0-38/html/container.html"></head>
+<body class="no-navbar"><div class="esa-mobile-menu"></div><div id="MathJax_Message" style="display: none;"></div>
+    <a name="top"></a>
+        <div id="bannerbar" class="bannerbar-mobile formobile">
+            <a href="https://www.aliyun.com/minisite/goods?userCode=swh7dvlt" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;aliyun-cps-blog-bannerbar-mobile&#39;)">
+                <img src="./手把手教你用Pytorch-Transformers（二）——实战_files/35695-20210428213541700-642740375.jpg" alt="">
+            </a>
+        </div>
+    <div id="top_nav" class="navbar forpc navbar-custom">
+        <nav id="nav_main" class="navbar-main">
+            <ul id="nav_left" class="navbar-list navbar-left">
+                <li class="navbar-branding"><a href="https://www.cnblogs.com/" title="开发者的网上家园"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/logo.svg" alt="博客园Logo"></a></li>
+                <li><a href="https://www.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-sitehome&#39;)">首页</a></li>
+                <li><a href="https://news.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-news&#39;)">新闻</a></li>
+                <li><a href="https://q.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-q&#39;)">博问</a></li>
+                <li><a id="nav_brandzone" href="https://brands.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-brands&#39;)">专区</a></li>
+                <li><a href="https://ing.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-ing&#39;)">闪存</a></li>
+                <li><a href="https://edu.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-edu&#39;)">班级</a></li>
+            </ul>
+            <ul id="nav_right" class="navbar-list navbar-right">
+                <li>
+                    <form id="zzk_search" class="navbar-search" action="https://zzk.cnblogs.com/s" method="get">
+                        <input name="w" id="zzk_search_input" placeholder="代码改变世界" type="text" tabindex="3">
+                        <button type="submit" id="zzk_search_button">
+                            <img src="./手把手教你用Pytorch-Transformers（二）——实战_files/search.svg" alt="搜索">
+                        </button>
+                    </form>
+                </li>
+                <li id="navbar_login_status" class="navbar-list">
+                    <a class="navbar-user-info navbar-blog" href="https://i.cnblogs.com/EditPosts.aspx?opt=1" alt="写随笔" title="写随笔" style="display: none;">
+                        <img id="new_post_icon" class="navbar-icon" src="./手把手教你用Pytorch-Transformers（二）——实战_files/newpost.svg" alt="写随笔">
+                    </a>
+                    <a id="navblog-myblog-icon" class="navbar-user-info navbar-blog" href="https://passport.cnblogs.com/GetBlogApplyStatus.aspx" alt="我的博客" title="我的博客" style="display: none;">
+                        <img id="myblog_icon" class="navbar-icon" src="./手把手教你用Pytorch-Transformers（二）——实战_files/myblog.svg" alt="我的博客">
+                    </a>
+                    <a class="navbar-user-info navbar-message navbar-icon-wrapper" href="https://msg.cnblogs.com/" alt="短消息" title="短消息" style="display: none;">
+                        <img id="msg_icon" class="navbar-icon" src="./手把手教你用Pytorch-Transformers（二）——实战_files/message.svg" alt="短消息">
+                        <span id="msg_count" style="display: none"></span>
+                    </a>
+                    <div id="user_info" class="navbar-user-info dropdown" style="display: none;">
+                        <a class="dropdown-button" href="https://home.cnblogs.com/">
+                            <img id="user_icon" class="navbar-avatar" src="./手把手教你用Pytorch-Transformers（二）——实战_files/avatar-default.svg" alt="用户头像">
+                        </a>
+                        <div class="dropdown-menu">
+                            <a id="navblog-myblog-text" href="https://passport.cnblogs.com/GetBlogApplyStatus.aspx">我的博客</a>
+                            <a href="https://home.cnblogs.com/">我的园子</a>
+                            <a href="https://account.cnblogs.com/settings/account">账号设置</a>
+                            <a href="javascript:void(0)" id="navbar_lite_mode_toggle" title="简洁模式会使用简洁款皮肤显示所有博客">
+    简洁模式 <img id="navbar_lite_mode_on" src="./手把手教你用Pytorch-Transformers（二）——实战_files/lite-mode-check.svg" class="hide"><span id="navbar_lite_mode_spinner" class="hide">...</span>
+</a>
+                            <a href="javascript:void(0)" onclick="account.logout();">退出登录</a>
+                        </div>
+                    </div>
+                    <a class="navbar-anonymous" href="https://account.cnblogs.com/signup/" style="display: inline;">注册</a>
+                    <a class="navbar-anonymous" href="javascript:void(0);" onclick="account.login()" style="display: inline;">登录</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    
+    <!--done-->
+<div id="home">
+<div id="header">
+	<div id="blogTitle">
+        <a id="lnkBlogLogo" href="https://www.cnblogs.com/dogecheng/"><img id="blogLogo" src="./手把手教你用Pytorch-Transformers（二）——实战_files/logo.gif" alt="返回主页"></a>		
+		
+<!--done-->
+<h1><a id="Header1_HeaderTitle" class="headermaintitle HeaderMainTitle" href="https://www.cnblogs.com/dogecheng/">那少年和狗</a>
+</h1>
+<h2>你像是一个终生旅途跋涉的香客，寻找一座根本不存在的神庙。</h2>
+
+
+
+
+		
+	</div><!--end: blogTitle 博客的标题和副标题 -->
+	<div id="navigator">
+		
+<ul id="navList">
+<li><a id="blog_nav_sitehome" class="menu" href="https://www.cnblogs.com/">
+博客园</a>
+<i></i></li>
+<li>
+<a id="blog_nav_myhome" class="menu" href="https://www.cnblogs.com/dogecheng/">
+首页</a>
+<i></i></li>
+<li>
+
+<a id="blog_nav_newpost" class="menu" href="https://i.cnblogs.com/EditPosts.aspx?opt=1">
+新随笔</a>
+<i></i></li>
+<li>
+<a id="blog_nav_contact" class="menu" href="https://msg.cnblogs.com/send/%E9%82%A3%E5%B0%91%E5%B9%B4%E5%92%8C%E7%8B%97">
+联系</a><i></i></li>
+<li>
+<a id="blog_nav_rss" class="menu" href="javascript:void(0)" data-rss="https://www.cnblogs.com/dogecheng/rss/">
+订阅</a>
+<!--<partial name="./Shared/_XmlLink.cshtml" model="Model" /></li>--><i></i></li>
+<li>
+<a id="blog_nav_admin" class="menu" href="https://i.cnblogs.com/">
+管理</a>
+<i></i></li>
+</ul>
+
+
+		<div class="blogStats">
+			<span id="stats_post_count">随笔 - 45&nbsp; </span>
+<span id="stats_article_count">文章 - 0&nbsp; </span>
+<span id="stats-comment_count">评论 - 44&nbsp; </span>
+<span id="stats-total-view-count">阅读 - 
+<span title="总阅读数: 254504">
+25万</span></span>
+
+		</div><!--end: blogStats -->
+	
+                <svg t="1573264861612" class="icon esa-search-btn" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="7386" width="32" height="32" data-spm-anchor-id="a313x.7781069.0.i8">
+                    <path fill="rgb(49, 70, 89)" d="M616.362667 580.608h-23.808l-8.533334-8.128a196.16 196.16 0 1 0-21.098666 21.098667l8.128 8.533333v23.808l150.805333 150.165333 44.8-44.8z m-180.8 0a135.594667 135.594667 0 1 1 135.594666-135.594667 135.402667 135.402667 0 0 1-135.573333 135.594667z" p-id="7387"></path>
+                </svg>
+                <svg t="1573265135257" class="icon esa-search-close" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15367" width="32" height="32">
+                    <path fill="rgb(49, 70, 89)" d="M515.23600182 491.06853843L378.27564815 354.10818478a17.09155825 17.09155825 0 1 0-24.17885764 24.15606913l136.96035332 136.97174792-136.96035331 136.97174789a17.09155825 17.09155825 0 1 0 24.16746339 24.16746337l136.97174791-136.96035366 136.9717479 136.96035366a17.09155825 17.09155825 0 1 0 24.16746337-24.15606912l-136.96035366-136.98314215 136.96035366-136.96035367a17.09155825 17.09155825 0 1 0-24.16746337-24.16746337l-136.96035366 136.96035364z" p-id="15368"></path>
+                </svg></div><!--end: navigator 博客导航栏 -->
+
+                <div class="esa-search-box">
+                    <div class="div_my_zzk">
+                        <input type="text" id="q" onkeydown="return zzk_go_enter(event);" class="input_my_zzk" placeholder="Type to Search">&nbsp;<input onclick="zzk_go()" type="button" value="搜 索" id="btnZzk" class="btn_my_zzk">
+                    </div>
+                </div></div><!--end: header 头部 -->
+<div id="main">
+	<div id="mainContent">
+	<div class="forFlow">
+		<div id="post_detail">
+    <!--done-->
+    <div id="topics">
+        <div class="post">
+            <h1 class="postTitle">
+                
+<a id="cb_post_title_url" class="postTitle2 vertical-middle" href="https://www.cnblogs.com/dogecheng/p/11911909.html">
+    <span>手把手教你用Pytorch-Transformers——实战（二）</span>
+    
+
+
+
+</a>
+
+            </h1>
+            <div class="clear"></div>
+            <div class="postBody">
+                <div id="cnblogs_post_body" class="blogpost-body blogpost-body-html">
+<blockquote>
+<p>本文是《手把手教你用Pytorch-Transformers》的第二篇，主要讲实战</p>
+<p><a href="https://www.cnblogs.com/dogecheng/p/11907036.html">手把手教你用Pytorch-Transformers——部分源码解读及相关说明（一）</a></p>
+<p>使用 PyTorch 的可以结合使用 Apex ，加速训练和减小显存的占用</p>
+<p><a href="https://blog.csdn.net/c9Yv2cf9I06K2A9E/article/details/100135729">PyTorch必备神器 | 唯快不破：基于Apex的混合精度加速</a></p>
+<p>github托管地址：<a href="https://github.com/NVIDIA/apex">https://github.com/NVIDIA/apex</a></p>
+</blockquote>
+<h2 id="1557950772">情感分类任务<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#1557950772" class="esa-anchor" style="opacity: 1;">#</a></h2>
+<p>这里使用&nbsp;<span style="color: rgba(51, 51, 51, 1); font-family: Verdana, Arial, Helvetica, sans-serif">BertForSequenceClassification 进行情感分类任务，还是用 苏剑林 整理的情感二分类数据集</span></p>
+<p><span style="color: rgba(51, 51, 51, 1); font-family: Verdana, Arial, Helvetica, sans-serif">可以结合之前发的那篇一起看，由于官方的 examples 还没细看，这里的例子使用 PyTorch 比较传统的方式进行训练</span></p>
+<blockquote>
+<p><span style="color: rgba(51, 51, 51, 1); font-family: Verdana, Arial, Helvetica, sans-serif">数据集：</span></p>
+<p><span style="color: rgba(51, 51, 51, 1); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px">原始Github链接：<a href="https://github.com/bojone/bert4keras/tree/master/examples/datasets">https://github.com/bojone/bert4keras/tree/master/examples/datasets</a></span></p>
+<p><span style="color: rgba(51, 51, 51, 1); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px">个人网盘：链接: https://pan.baidu.com/s/1OAhNbRYpU1HW25_vChdRng 提取码: uxax&nbsp;</span></p>
+</blockquote>
+<h3 id="1687308134">用Dataset表示数据集<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#1687308134" class="esa-anchor">#</a></h3>
+<p>先放上一些参数设置</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 超参数</span>
+hidden_dropout_prob = 0.3<span style="color: rgba(0, 0, 0, 1)">
+num_labels </span>= 2<span style="color: rgba(0, 0, 0, 1)">
+learning_rate </span>= 1e-5<span style="color: rgba(0, 0, 0, 1)">
+weight_decay </span>= 1e-2<span style="color: rgba(0, 0, 0, 1)">
+epochs </span>= 2<span style="color: rgba(0, 0, 0, 1)">
+batch_size </span>= 16<span style="color: rgba(0, 0, 0, 1)"><br></span></pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>继承 PyTorch 的 Dataset ，编写一个类表示数据集，这里我们用字典返回一个样本和它的标签</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><span style="color: rgba(0, 0, 255, 1)">from</span> torch.utils.data <span style="color: rgba(0, 0, 255, 1)">import</span><span style="color: rgba(0, 0, 0, 1)"> Dataset
+</span><span style="color: rgba(0, 0, 255, 1)">import</span><span style="color: rgba(0, 0, 0, 1)"> pandas as pd
+
+</span><span style="color: rgba(0, 0, 255, 1)">class</span><span style="color: rgba(0, 0, 0, 1)"> SentimentDataset(Dataset):
+    </span><span style="color: rgba(0, 0, 255, 1)">def</span> <span style="color: rgba(128, 0, 128, 1)">__init__</span><span style="color: rgba(0, 0, 0, 1)">(self, path_to_file):
+        self.dataset </span>= pd.read_csv(path_to_file, sep=<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">\t</span><span style="color: rgba(128, 0, 0, 1)">"</span>, names=[<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">text</span><span style="color: rgba(128, 0, 0, 1)">"</span>, <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">label</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">])
+    </span><span style="color: rgba(0, 0, 255, 1)">def</span> <span style="color: rgba(128, 0, 128, 1)">__len__</span><span style="color: rgba(0, 0, 0, 1)">(self):
+        </span><span style="color: rgba(0, 0, 255, 1)">return</span><span style="color: rgba(0, 0, 0, 1)"> len(self.dataset)
+    </span><span style="color: rgba(0, 0, 255, 1)">def</span> <span style="color: rgba(128, 0, 128, 1)">__getitem__</span><span style="color: rgba(0, 0, 0, 1)">(self, idx):
+        text </span>= self.dataset.loc[idx, <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">text</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">]
+        label </span>= self.dataset.loc[idx, <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">label</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">]
+        sample </span>= {<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">text</span><span style="color: rgba(128, 0, 0, 1)">"</span>: text, <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">label</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">: label}
+        </span><span style="color: rgba(0, 0, 255, 1)">return</span> sample</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<h3 id="3944424336">编写模型<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#3944424336" class="esa-anchor">#</a></h3>
+<p>Transformers 已经实现好了用来分类的模型，我们这里就不自己编写了，直接使用 BertForSequenceClassification 调用预训练模型</p>
+<p>一些自定义的配置可以通过 BertConfig 传递给 BertForSequenceClassification</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><span style="color: rgba(0, 0, 255, 1)">from</span> transformers <span style="color: rgba(0, 0, 255, 1)">import</span><span style="color: rgba(0, 0, 0, 1)"> BertConfig, BertForSequenceClassification
+</span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 使用GPU</span><span style="color: rgba(0, 128, 0, 1)">
+#</span><span style="color: rgba(0, 128, 0, 1)"> 通过model.to(device)的方式使用</span>
+device = torch.device(<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">cuda:0</span><span style="color: rgba(128, 0, 0, 1)">"</span> <span style="color: rgba(0, 0, 255, 1)">if</span> torch.cuda.is_available() <span style="color: rgba(0, 0, 255, 1)">else</span> <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">cpu</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">)
+config </span>= BertConfig.from_pretrained(<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">bert-base-uncased</span><span style="color: rgba(128, 0, 0, 1)">"</span>, num_labels=num_labels, hidden_dropout_prob=<span style="color: rgba(0, 0, 0, 1)">hidden_dropout_prob)
+model </span>= BertForSequenceClassification.from_pretrained(<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">bert-base-uncased</span><span style="color: rgba(128, 0, 0, 1)">"</span>, config=<span style="color: rgba(0, 0, 0, 1)">config)
+model.to(device)</span></pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>想自定义编写模型的话可以参考BertForSequenceClassification。另外，这个BertConfig还可以添加自定义的属性，比如添加一个作者啥的</p>
+<div class="cnblogs_code">
+<pre>config = BertConfig.from_pretrained(<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">bert-base-uncased</span><span style="color: rgba(128, 0, 0, 1)">"</span>, author=<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">DogeCheng</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">)</span></pre>
+</div>
+<h3 id="18177863">读取数据集<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#18177863" class="esa-anchor">#</a></h3>
+<p>用 DataLoader 得到一个迭代器，每次得到一个 batch_size 的数据</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><span style="color: rgba(0, 0, 255, 1)">from</span> torch.utils.data <span style="color: rgba(0, 0, 255, 1)">import</span><span style="color: rgba(0, 0, 0, 1)"> DataLoader
+data_path </span>= <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">/data/sentiment/</span><span style="color: rgba(128, 0, 0, 1)">"</span>
+<span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 加载数据集</span>
+sentiment_train_set = SentimentDataset(data_path + <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">sentiment.train.data</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">)
+sentiment_train_loader </span>= DataLoader(sentiment_train_set, batch_size=batch_size, shuffle=True, num_workers=2<span style="color: rgba(0, 0, 0, 1)">)
+
+sentiment_valid_set </span>= SentimentDataset(data_path + <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">sentiment.train.data</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">)
+sentiment_valid_loader </span>= DataLoader(sentiment_valid_set, batch_size=batch_size, shuffle=False, num_workers=2)</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<h3 id="496958553">数据处理<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#496958553" class="esa-anchor">#</a></h3>
+<p>主要实现对文本进行 tokenization 和 padding 的函数</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre>vocab_file = <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">PyTorch_Pretrained_Model/chinese_wwm_pytorch/vocab.txt</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">
+tokenizer </span>=<span style="color: rgba(0, 0, 0, 1)"> BertTokenizer(vocab_file)
+
+</span><span style="color: rgba(0, 0, 255, 1)">def</span> convert_text_to_ids(tokenizer, text, max_len=100<span style="color: rgba(0, 0, 0, 1)">):
+    </span><span style="color: rgba(0, 0, 255, 1)">if</span><span style="color: rgba(0, 0, 0, 1)"> isinstance(text, str):
+        tokenized_text </span>= tokenizer.encode_plus(text, max_length=max_len, add_special_tokens=<span style="color: rgba(0, 0, 0, 1)">True)
+        input_ids </span>= tokenized_text[<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">input_ids</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">]
+        token_type_ids </span>= tokenized_text[<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">token_type_ids</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">]
+    </span><span style="color: rgba(0, 0, 255, 1)">elif</span><span style="color: rgba(0, 0, 0, 1)"> isinstance(text, list):
+        input_ids </span>=<span style="color: rgba(0, 0, 0, 1)"> []
+        token_type_ids </span>=<span style="color: rgba(0, 0, 0, 1)"> []
+        </span><span style="color: rgba(0, 0, 255, 1)">for</span> t <span style="color: rgba(0, 0, 255, 1)">in</span><span style="color: rgba(0, 0, 0, 1)"> text:
+            tokenized_text </span>= tokenizer.encode_plus(t, max_length=max_len, add_special_tokens=<span style="color: rgba(0, 0, 0, 1)">True)
+            input_ids.append(tokenized_text[</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">input_ids</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">])
+            token_type_ids.append(tokenized_text[</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">token_type_ids</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">])
+    </span><span style="color: rgba(0, 0, 255, 1)">else</span><span style="color: rgba(0, 0, 0, 1)">:
+        </span><span style="color: rgba(0, 0, 255, 1)">print</span>(<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">Unexpected input</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">)
+    </span><span style="color: rgba(0, 0, 255, 1)">return</span><span style="color: rgba(0, 0, 0, 1)"> input_ids, token_type_ids
+
+</span><span style="color: rgba(0, 0, 255, 1)">def</span><span style="color: rgba(0, 0, 0, 1)"> seq_padding(tokenizer, X):
+    pad_id </span>= tokenizer.convert_tokens_to_ids(<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">[PAD]</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">)
+    </span><span style="color: rgba(0, 0, 255, 1)">if</span> len(X) &lt;= 1<span style="color: rgba(0, 0, 0, 1)">:
+        </span><span style="color: rgba(0, 0, 255, 1)">return</span><span style="color: rgba(0, 0, 0, 1)"> torch.tensor(X)
+    L </span>= [len(x) <span style="color: rgba(0, 0, 255, 1)">for</span> x <span style="color: rgba(0, 0, 255, 1)">in</span><span style="color: rgba(0, 0, 0, 1)"> X]
+    ML </span>=<span style="color: rgba(0, 0, 0, 1)"> max(L)
+    X </span>= torch.Tensor([x + [pad_id] * (ML - len(x)) <span style="color: rgba(0, 0, 255, 1)">if</span> len(x) &lt; ML <span style="color: rgba(0, 0, 255, 1)">else</span> x <span style="color: rgba(0, 0, 255, 1)">for</span> x <span style="color: rgba(0, 0, 255, 1)">in</span><span style="color: rgba(0, 0, 0, 1)"> X])
+    </span><span style="color: rgba(0, 0, 255, 1)">return</span> X</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<h3 id="1575696445">定义优化器和损失函数<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#1575696445" class="esa-anchor">#</a></h3>
+<p>其实从源码看，我们知道 BertForSequenceClassification 已经有了损失函数，可以不用实现，这里展示一个更通用的例子，自己实现损失函数</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><span style="color: rgba(0, 0, 255, 1)">import</span><span style="color: rgba(0, 0, 0, 1)"> torch
+</span><span style="color: rgba(0, 0, 255, 1)">import</span><span style="color: rgba(0, 0, 0, 1)"> torch.nn as nn
+</span><span style="color: rgba(0, 0, 255, 1)">from</span> transformers <span style="color: rgba(0, 0, 255, 1)">import</span><span style="color: rgba(0, 0, 0, 1)"> AdamW
+</span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 定义优化器和损失函数</span><span style="color: rgba(0, 128, 0, 1)">
+#</span><span style="color: rgba(0, 128, 0, 1)"> Prepare optimizer and schedule (linear warmup and decay)</span>
+no_decay = [<span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">bias</span><span style="color: rgba(128, 0, 0, 1)">'</span>, <span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">LayerNorm.weight</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(0, 0, 0, 1)">]
+optimizer_grouped_parameters </span>=<span style="color: rgba(0, 0, 0, 1)"> [
+        {</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">params</span><span style="color: rgba(128, 0, 0, 1)">'</span>: [p <span style="color: rgba(0, 0, 255, 1)">for</span> n, p <span style="color: rgba(0, 0, 255, 1)">in</span> model.named_parameters() <span style="color: rgba(0, 0, 255, 1)">if</span> <span style="color: rgba(0, 0, 255, 1)">not</span> any(nd <span style="color: rgba(0, 0, 255, 1)">in</span> n <span style="color: rgba(0, 0, 255, 1)">for</span> nd <span style="color: rgba(0, 0, 255, 1)">in</span> no_decay)], <span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">weight_decay</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(0, 0, 0, 1)">: weight_decay},
+        {</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">params</span><span style="color: rgba(128, 0, 0, 1)">'</span>: [p <span style="color: rgba(0, 0, 255, 1)">for</span> n, p <span style="color: rgba(0, 0, 255, 1)">in</span> model.named_parameters() <span style="color: rgba(0, 0, 255, 1)">if</span> any(nd <span style="color: rgba(0, 0, 255, 1)">in</span> n <span style="color: rgba(0, 0, 255, 1)">for</span> nd <span style="color: rgba(0, 0, 255, 1)">in</span> no_decay)], <span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">weight_decay</span><span style="color: rgba(128, 0, 0, 1)">'</span>: 0.0<span style="color: rgba(0, 0, 0, 1)">}
+]
+</span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)">optimizer = AdamW(model.parameters(), lr=learning_rate)</span>
+optimizer = AdamW(optimizer_grouped_parameters, lr=<span style="color: rgba(0, 0, 0, 1)">learning_rate)
+criterion </span>= nn.CrossEntropyLoss()</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>从上面我们可以看到 bias 和 LayerNorm.weight 都没用权重衰减，可以参考下面的博文，主要是由于 bias 的更新跟权重衰减无关</p>
+<blockquote>
+<p>权重衰减（weight decay）与学习率衰减（learning rate decay）：</p>
+<p><a href="https://blog.csdn.net/program_developer/article/details/80867468">https://blog.csdn.net/program_developer/article/details/80867468</a></p>
+</blockquote>
+<h3 id="2088983941">定义训练和验证函数<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#2088983941" class="esa-anchor">#</a></h3>
+<p>PyTorch 不像 Keras 那样调用 fit 就可以了，大多都需要自己实现，为了复用性，这里用函数实现了简单的训练和测试函数</p>
+<p>因为 BertForSequenceClassification 里面已经有了一个 CrossEntropyLoss() ，实际<strong>可以不用</strong>我们刚刚的<strong>实例化的损失函数</strong>，<strong>见 train() 函数 中的注释</strong></p>
+<p>函数返回2个内容：一个 epoch 内的损失和准确率，如果要计算其他评估指标需自己实现（或通过 sklearn.metrics 帮助）</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><span style="color: rgba(0, 0, 255, 1)">def</span><span style="color: rgba(0, 0, 0, 1)"> train(model, iterator, optimizer, criterion, device):
+    model.train()
+    epoch_loss </span>=<span style="color: rgba(0, 0, 0, 1)"> 0
+    epoch_acc </span>=<span style="color: rgba(0, 0, 0, 1)"> 0
+    </span><span style="color: rgba(0, 0, 255, 1)">for</span> i, batch <span style="color: rgba(0, 0, 255, 1)">in</span><span style="color: rgba(0, 0, 0, 1)"> enumerate(iterator):
+        label </span>= batch[<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">label</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">]
+        text </span>= batch[<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">text</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">]
+        input_ids, token_type_ids </span>=<span style="color: rgba(0, 0, 0, 1)"> convert_text_to_ids(tokenizer, text)
+        input_ids </span>=<span style="color: rgba(0, 0, 0, 1)"> seq_padding(tokenizer, input_ids)
+        token_type_ids </span>=<span style="color: rgba(0, 0, 0, 1)"> seq_padding(tokenizer, token_type_ids)
+        </span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 标签形状为 (batch_size, 1) </span>
+        label = label.unsqueeze(1<span style="color: rgba(0, 0, 0, 1)">)
+        </span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 需要 LongTensor</span>
+        input_ids, token_type_ids, label =<span style="color: rgba(0, 0, 0, 1)"> input_ids.long(), token_type_ids.long(), label.long()
+        </span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 梯度清零</span>
+<span style="color: rgba(0, 0, 0, 1)">        optimizer.zero_grad()
+        </span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 迁移到GPU</span>
+        input_ids, token_type_ids, label =<span style="color: rgba(0, 0, 0, 1)"> input_ids.to(device), token_type_ids.to(device), label.to(device)
+        output </span>= model(input_ids=input_ids, token_type_ids=token_type_ids, labels=<span style="color: rgba(0, 0, 0, 1)">label)
+        y_pred_prob </span>= output[1<span style="color: rgba(0, 0, 0, 1)">]
+        y_pred_label </span>= y_pred_prob.argmax(dim=1<span style="color: rgba(0, 0, 0, 1)">)
+        </span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 计算loss</span>
+        <span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 这个 loss 和 output[0] 是一样的</span>
+        loss = criterion(y_pred_prob.view(-1, 2), label.view(-1<span style="color: rgba(0, 0, 0, 1)">))
+        </span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)">loss = output[0]</span>
+        <span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 计算acc</span>
+        acc = ((y_pred_label == label.view(-1<span style="color: rgba(0, 0, 0, 1)">)).sum()).item()
+        </span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 反向传播</span>
+<span style="color: rgba(0, 0, 0, 1)">        loss.backward()
+        optimizer.step()
+        </span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> epoch 中的 loss 和 acc 累加</span>
+        epoch_loss +=<span style="color: rgba(0, 0, 0, 1)"> loss.item()
+        epoch_acc </span>+=<span style="color: rgba(0, 0, 0, 1)"> acc
+        </span><span style="color: rgba(0, 0, 255, 1)">if</span> i % 200 ==<span style="color: rgba(0, 0, 0, 1)"> 0:
+            </span><span style="color: rgba(0, 0, 255, 1)">print</span>(<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">current loss:</span><span style="color: rgba(128, 0, 0, 1)">"</span>, epoch_loss / (i+1), <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">\t</span><span style="color: rgba(128, 0, 0, 1)">"</span>, <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">current acc:</span><span style="color: rgba(128, 0, 0, 1)">"</span>, epoch_acc / ((i+1)*<span style="color: rgba(0, 0, 0, 1)">len(label)))
+    </span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> return epoch_loss / len(iterator), epoch_acc / (len(iterator) * iterator.batch_size)</span>
+    <span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 经评论区提醒修改</span>
+    <span style="color: rgba(0, 0, 255, 1)">return</span> epoch_loss / len(iterator), epoch_acc /<span style="color: rgba(0, 0, 0, 1)"> len(iterator.dataset.dataset)
+
+</span><span style="color: rgba(0, 0, 255, 1)">def</span><span style="color: rgba(0, 0, 0, 1)"> evaluate(model, iterator, criterion, device):
+    model.eval()
+    epoch_loss </span>=<span style="color: rgba(0, 0, 0, 1)"> 0
+    epoch_acc </span>=<span style="color: rgba(0, 0, 0, 1)"> 0
+    with torch.no_grad():
+        </span><span style="color: rgba(0, 0, 255, 1)">for</span> _, batch <span style="color: rgba(0, 0, 255, 1)">in</span><span style="color: rgba(0, 0, 0, 1)"> enumerate(iterator):
+            label </span>= batch[<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">label</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">]
+            text </span>= batch[<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">text</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">]
+            input_ids, token_type_ids </span>=<span style="color: rgba(0, 0, 0, 1)"> convert_text_to_ids(tokenizer, text)
+            input_ids </span>=<span style="color: rgba(0, 0, 0, 1)"> seq_padding(tokenizer, input_ids)
+            token_type_ids </span>=<span style="color: rgba(0, 0, 0, 1)"> seq_padding(tokenizer, token_type_ids)
+            label </span>= label.unsqueeze(1<span style="color: rgba(0, 0, 0, 1)">)
+            input_ids, token_type_ids, label </span>=<span style="color: rgba(0, 0, 0, 1)"> input_ids.long(), token_type_ids.long(), label.long()
+            input_ids, token_type_ids, label </span>=<span style="color: rgba(0, 0, 0, 1)"> input_ids.to(device), token_type_ids.to(device), label.to(device)
+            output </span>= model(input_ids=input_ids, token_type_ids=token_type_ids, labels=<span style="color: rgba(0, 0, 0, 1)">label)
+            y_pred_label </span>= output[1].argmax(dim=1<span style="color: rgba(0, 0, 0, 1)">)
+            loss </span>=<span style="color: rgba(0, 0, 0, 1)"> output[0]
+            acc </span>= ((y_pred_label == label.view(-1<span style="color: rgba(0, 0, 0, 1)">)).sum()).item()
+            epoch_loss </span>+=<span style="color: rgba(0, 0, 0, 1)"> loss.item()
+            epoch_acc </span>+=<span style="color: rgba(0, 0, 0, 1)"> acc
+    </span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> return epoch_loss / len(iterator), epoch_acc / (len(iterator) * iterator.batch_size)</span>
+    <span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 经评论区提醒修改</span>
+    <span style="color: rgba(0, 0, 255, 1)">return</span> epoch_loss / len(iterator), epoch_acc / len(iterator.dataset.dataset)</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<h3 id="1272983701">开始训练<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#1272983701" class="esa-anchor">#</a></h3>
+<p>这里只跑了 2 个 epoch，在验证集上的效果达到了 92 的准确率</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> 再测试</span>
+<span style="color: rgba(0, 0, 255, 1)">for</span> i <span style="color: rgba(0, 0, 255, 1)">in</span><span style="color: rgba(0, 0, 0, 1)"> range(epochs):
+    train_loss, train_acc </span>= train(model, sentiment_train_loader, optimizer, criterion, device<span style="color: rgba(0, 0, 0, 1)">)
+    </span><span style="color: rgba(0, 0, 255, 1)">print</span>(<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">train loss: </span><span style="color: rgba(128, 0, 0, 1)">"</span>, train_loss, <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">\t</span><span style="color: rgba(128, 0, 0, 1)">"</span>, <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">train acc:</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">, train_acc)
+    valid_loss, valid_acc </span>=<span style="color: rgba(0, 0, 0, 1)"> evaluate(model, sentiment_valid_loader, criterion, device)
+    </span><span style="color: rgba(0, 0, 255, 1)">print</span>(<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">valid loss: </span><span style="color: rgba(128, 0, 0, 1)">"</span>, valid_loss, <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">\t</span><span style="color: rgba(128, 0, 0, 1)">"</span>, <span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">valid acc:</span><span style="color: rgba(128, 0, 0, 1)">"</span>, valid_acc)</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>第一个 epoch</p>
+<p><a href="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191128200832959-1269403373.png" data-title="" data-alt="" data-lightbox="roadtrip"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191128200832959-1269403373.png" alt="" style="display: block; margin-left: auto; margin-right: auto"></a></p>
+<p>第二个 epoch</p>
+<p><a href="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191128200845657-364538643.png" data-title="" data-alt="" data-lightbox="roadtrip"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191128200845657-364538643.png" alt="" style="display: block; margin-left: auto; margin-right: auto"></a></p>
+<h2 id="2341663145">&nbsp;SQuAD任务<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#2341663145" class="esa-anchor">#</a></h2>
+<h3 id="357584314">官方例子的使用<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#357584314" class="esa-anchor">#</a></h3>
+<p>这里直接使用 Transformers 提供 run_squad.py 进行说明</p>
+<blockquote>
+<p>这里使用的是 SQuAD v1.1 数据集，下载地址为</p>
+<ul>
+<li><a href="https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v1.1.json" rel="nofollow">train-v1.1.json</a></li>
+<li><a href="https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v1.1.json" rel="nofollow">dev-v1.1.json</a></li>
+</ul>
+</blockquote>
+<p>下载好数据后，放入&nbsp;$SQUAD_DIR 中，输入以下命令运行</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre>export SQUAD_DIR=/path/to/<span style="color: rgba(0, 0, 0, 1)">SQUAD
+
+python run_squad.py \
+  </span>--<span style="color: rgba(0, 0, 0, 1)">model_type bert \
+  </span>--model_name_or_path bert-base-<span style="color: rgba(0, 0, 0, 1)">cased \
+  </span>--<span style="color: rgba(0, 0, 0, 1)">do_train \
+  </span>--<span style="color: rgba(0, 0, 0, 1)">do_eval \
+  </span>--<span style="color: rgba(0, 0, 0, 1)">do_lower_case \
+  </span>--train_file $SQUAD_DIR/train-v1.<span style="color: rgba(128, 0, 128, 1)">1</span><span style="color: rgba(0, 0, 0, 1)">.json \
+  </span>--predict_file $SQUAD_DIR/dev-v1.<span style="color: rgba(128, 0, 128, 1)">1</span><span style="color: rgba(0, 0, 0, 1)">.json \
+  </span>--per_gpu_train_batch_size <span style="color: rgba(128, 0, 128, 1)">12</span><span style="color: rgba(0, 0, 0, 1)"> \
+  </span>--learning_rate 3e-<span style="color: rgba(128, 0, 128, 1)">5</span><span style="color: rgba(0, 0, 0, 1)"> \
+  </span>--num_train_epochs <span style="color: rgba(128, 0, 128, 1)">2.0</span><span style="color: rgba(0, 0, 0, 1)"> \
+  </span>--max_seq_length <span style="color: rgba(128, 0, 128, 1)">384</span><span style="color: rgba(0, 0, 0, 1)"> \
+  </span>--doc_stride <span style="color: rgba(128, 0, 128, 1)">128</span><span style="color: rgba(0, 0, 0, 1)"> \
+  </span>--output_dir /tmp/debug_squad/</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<h3 id="81865228">utils_squad.py<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#81865228" class="esa-anchor">#</a></h3>
+<p>SQuAD数据集是用JSON格式存储的，而且层级很多，下面的链接有SQuAD数据集的结构化展示</p>
+<blockquote>
+<p class="MsoNormal"><span lang="EN-US"><a href="https://blog.csdn.net/m0_38133212/article/details/87889949">https://blog.csdn.net/m0_38133212/article/details/87889949</a></span></p>
+</blockquote>
+<p class="MsoNormal">我们主要使用到的是 paragraphs 字段的内容，包括context 和 qas</p>
+<ul>
+<li class="MsoNormal">qas 包括 answers，question 以及 id</li>
+<li class="MsoNormal">而 answers 包括 answer_start 和 text</li>
+</ul>
+<h4 id="3327931400">read_squad_examples()<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#3327931400" class="esa-anchor">#</a></h4>
+<p>read_squad_examples() 就是负责把原来的JSON数据抽取出来，让数据变得更清晰。每条数据变成一个 SquadExample 对象，存放下面的内容</p>
+<ul>
+<li>qas_id：id</li>
+<li>question_text：question</li>
+<li>doc_tokens：经过 tokenization 后的 text</li>
+<li>orig_answer_text：text</li>
+<li>start_position：开始位置</li>
+<li>end_position：结束位置</li>
+<li>is_impossible：样本是否没有答案</li>
+</ul>
+<p>其中 <strong>is_impossible 是SQuAD v2才有的字段</strong>，read_squad_examples() 会判断数据集的版本，我们在运行 run_squad.py时，可以通过 --version_2_with_negative 参数设置</p>
+<div class="cnblogs_code">
+<pre><span style="color: rgba(0, 0, 255, 1)">if</span><span style="color: rgba(0, 0, 0, 1)"> version_2_with_negative:
+    is_impossible </span>= qa[<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">is_impossible</span><span style="color: rgba(128, 0, 0, 1)">"</span>]</pre>
+</div>
+<p>数据集只提供了 answer_start，<strong>所以 end_position 需要自己计算，即 start_position 加上答案的长度-1</strong></p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><span style="color: rgba(0, 0, 255, 1)">if</span> <span style="color: rgba(0, 0, 255, 1)">not</span><span style="color: rgba(0, 0, 0, 1)"> is_impossible:
+    answer </span>= qa[<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">answers</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">][0]
+    orig_answer_text </span>= answer[<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">text</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">]
+    answer_offset </span>= answer[<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">answer_start</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">]
+    answer_length </span>=<span style="color: rgba(0, 0, 0, 1)"> len(orig_answer_text)
+    start_position </span>=<span style="color: rgba(0, 0, 0, 1)"> char_to_word_offset[answer_offset]
+    end_position </span>= char_to_word_offset[answer_offset + answer_length - 1]</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<h4 id="4102710591"><strong>convert_examples_to_features()</strong><a href="https://www.cnblogs.com/dogecheng/p/11911909.html#4102710591" class="esa-anchor">#</a></h4>
+<p>read_squad_examples() 负责从 JSON 中读取数据，并进行一些处理，但是这样不能输入 Bert 模型中</p>
+<p>所以<strong>还需要使用&nbsp;convert_examples_to_features() 函数处理成能够输入到 Bert 中的格式，主要是截断、padding 和 token转换为id</strong>等</p>
+<p>如简单粗暴的截断操作</p>
+<div class="cnblogs_code">
+<pre><span style="color: rgba(0, 0, 255, 1)">if</span> len(query_tokens) &gt;<span style="color: rgba(0, 0, 0, 1)"> max_query_length:
+    query_tokens </span>= query_tokens[0:max_query_length]</pre>
+</div>
+<p>token 转换成 id 和 mask 等操作</p>
+<div class="cnblogs_code">
+<pre>input_ids =<span style="color: rgba(0, 0, 0, 1)"> tokenizer.convert_tokens_to_ids(tokens)
+
+</span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> The mask has 1 for real tokens and 0 for padding tokens. Only real</span><span style="color: rgba(0, 128, 0, 1)">
+#</span><span style="color: rgba(0, 128, 0, 1)"> tokens are attended to.</span>
+input_mask = [1 <span style="color: rgba(0, 0, 255, 1)">if</span> mask_padding_with_zero <span style="color: rgba(0, 0, 255, 1)">else</span> 0] * len(input_ids)</pre>
+</div>
+<p>padding 操作</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> Zero-pad up to the sequence length.</span>
+<span style="color: rgba(0, 0, 255, 1)">while</span> len(input_ids) &lt;<span style="color: rgba(0, 0, 0, 1)"> max_seq_length:
+    input_ids.append(pad_token)
+    input_mask.append(0 </span><span style="color: rgba(0, 0, 255, 1)">if</span> mask_padding_with_zero <span style="color: rgba(0, 0, 255, 1)">else</span> 1<span style="color: rgba(0, 0, 0, 1)">)
+    segment_ids.append(pad_token_segment_id)
+    p_mask.append(</span>1)</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>最后每个样本用 <strong>InputFeatures</strong> 对象存放这些处理后的数据</p>
+<h3 id="3554259658">run_squad.py<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#3554259658" class="esa-anchor">#</a></h3>
+<p>run_squad.py 用一个字典存放不同模型用到的Config、Model 和 Tokenizer，通过 --model_type 参数使用</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre>MODEL_CLASSES =<span style="color: rgba(0, 0, 0, 1)"> {
+    </span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">bert</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(0, 0, 0, 1)">: (BertConfig, BertForQuestionAnswering, BertTokenizer),
+    </span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">xlnet</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(0, 0, 0, 1)">: (XLNetConfig, XLNetForQuestionAnswering, XLNetTokenizer),
+    </span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">xlm</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(0, 0, 0, 1)">: (XLMConfig, XLMForQuestionAnswering, XLMTokenizer),
+    </span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">distilbert</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(0, 0, 0, 1)">: (DistilBertConfig, DistilBertForQuestionAnswering, DistilBertTokenizer),
+    </span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">albert</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(0, 0, 0, 1)">: (AlbertConfig, AlbertForQuestionAnswering, AlbertTokenizer)
+}</span></pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>我们通过 --model_type 参数使用需要的模型，并在 main() 函数中实例化 config、model 和 tokenizer 对象</p>
+<div class="cnblogs_code">
+<pre>config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]</pre>
+</div>
+<h4 id="1874485555">准备数据集<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#1874485555" class="esa-anchor">#</a></h4>
+<p>使用&nbsp;read_squad_examples 处理再用&nbsp;convert_examples_to_features&nbsp;将每一个样本用 <strong>InputFeatures</strong>&nbsp;对象表示</p>
+<p>再通过<strong> load_and_cache_examples()</strong>&nbsp;将数据全部变成张量，大致代码如下</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre>...<br>examples = read_squad_examples(input_file=<span style="color: rgba(0, 0, 0, 1)">input_file,
+                                        is_training</span>=<span style="color: rgba(0, 0, 255, 1)">not</span><span style="color: rgba(0, 0, 0, 1)"> evaluate,
+                                        version_2_with_negative</span>=<span style="color: rgba(0, 0, 0, 1)">args.version_2_with_negative)
+features </span>= convert_examples_to_features(examples=<span style="color: rgba(0, 0, 0, 1)">examples,
+                                        tokenizer</span>=<span style="color: rgba(0, 0, 0, 1)">tokenizer,
+                                        max_seq_length</span>=<span style="color: rgba(0, 0, 0, 1)">args.max_seq_length,
+                                        doc_stride</span>=<span style="color: rgba(0, 0, 0, 1)">args.doc_stride,
+                                        max_query_length</span>=<span style="color: rgba(0, 0, 0, 1)">args.max_query_length,
+                                        is_training</span>=<span style="color: rgba(0, 0, 255, 1)">not</span><span style="color: rgba(0, 0, 0, 1)"> evaluate,
+                                        cls_token_segment_id</span>=2 <span style="color: rgba(0, 0, 255, 1)">if</span> args.model_type <span style="color: rgba(0, 0, 255, 1)">in</span> [<span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">xlnet</span><span style="color: rgba(128, 0, 0, 1)">'</span>] <span style="color: rgba(0, 0, 255, 1)">else</span><span style="color: rgba(0, 0, 0, 1)"> 0,
+                                        pad_token_segment_id</span>=3 <span style="color: rgba(0, 0, 255, 1)">if</span> args.model_type <span style="color: rgba(0, 0, 255, 1)">in</span> [<span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">xlnet</span><span style="color: rgba(128, 0, 0, 1)">'</span>] <span style="color: rgba(0, 0, 255, 1)">else</span><span style="color: rgba(0, 0, 0, 1)"> 0,
+                                        cls_token_at_end</span>=True <span style="color: rgba(0, 0, 255, 1)">if</span> args.model_type <span style="color: rgba(0, 0, 255, 1)">in</span> [<span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">xlnet</span><span style="color: rgba(128, 0, 0, 1)">'</span>] <span style="color: rgba(0, 0, 255, 1)">else</span><span style="color: rgba(0, 0, 0, 1)"> False,
+                                        sequence_a_is_doc</span>=True <span style="color: rgba(0, 0, 255, 1)">if</span> args.model_type <span style="color: rgba(0, 0, 255, 1)">in</span> [<span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">xlnet</span><span style="color: rgba(128, 0, 0, 1)">'</span>] <span style="color: rgba(0, 0, 255, 1)">else</span><span style="color: rgba(0, 0, 0, 1)"> False)
+
+...
+
+</span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> Convert to Tensors and build dataset</span>
+all_input_ids = torch.tensor([f.input_ids <span style="color: rgba(0, 0, 255, 1)">for</span> f <span style="color: rgba(0, 0, 255, 1)">in</span> features], dtype=<span style="color: rgba(0, 0, 0, 1)">torch.long)
+all_input_mask </span>= torch.tensor([f.input_mask <span style="color: rgba(0, 0, 255, 1)">for</span> f <span style="color: rgba(0, 0, 255, 1)">in</span> features], dtype=<span style="color: rgba(0, 0, 0, 1)">torch.long)
+all_segment_ids </span>= torch.tensor([f.segment_ids <span style="color: rgba(0, 0, 255, 1)">for</span> f <span style="color: rgba(0, 0, 255, 1)">in</span> features], dtype=<span style="color: rgba(0, 0, 0, 1)">torch.long)
+all_cls_index </span>= torch.tensor([f.cls_index <span style="color: rgba(0, 0, 255, 1)">for</span> f <span style="color: rgba(0, 0, 255, 1)">in</span> features], dtype=<span style="color: rgba(0, 0, 0, 1)">torch.long)
+all_p_mask </span>= torch.tensor([f.p_mask <span style="color: rgba(0, 0, 255, 1)">for</span> f <span style="color: rgba(0, 0, 255, 1)">in</span> features], dtype=<span style="color: rgba(0, 0, 0, 1)">torch.float)
+</span><span style="color: rgba(0, 0, 255, 1)">if</span><span style="color: rgba(0, 0, 0, 1)"> evaluate:
+    all_example_index </span>= torch.arange(all_input_ids.size(0), dtype=<span style="color: rgba(0, 0, 0, 1)">torch.long)
+    dataset </span>=<span style="color: rgba(0, 0, 0, 1)"> TensorDataset(all_input_ids, all_input_mask, all_segment_ids,
+                            all_example_index, all_cls_index, all_p_mask)
+</span><span style="color: rgba(0, 0, 255, 1)">else</span><span style="color: rgba(0, 0, 0, 1)">:
+    all_start_positions </span>= torch.tensor([f.start_position <span style="color: rgba(0, 0, 255, 1)">for</span> f <span style="color: rgba(0, 0, 255, 1)">in</span> features], dtype=<span style="color: rgba(0, 0, 0, 1)">torch.long)
+    all_end_positions </span>= torch.tensor([f.end_position <span style="color: rgba(0, 0, 255, 1)">for</span> f <span style="color: rgba(0, 0, 255, 1)">in</span> features], dtype=<span style="color: rgba(0, 0, 0, 1)">torch.long)
+    dataset </span>=<span style="color: rgba(0, 0, 0, 1)"> TensorDataset(all_input_ids, all_input_mask, all_segment_ids,
+                            all_start_positions, all_end_positions,
+                            all_cls_index, all_p_mask)
+
+</span><span style="color: rgba(0, 0, 255, 1)">if</span><span style="color: rgba(0, 0, 0, 1)"> output_examples:
+    </span><span style="color: rgba(0, 0, 255, 1)">return</span><span style="color: rgba(0, 0, 0, 1)"> dataset, examples, features
+</span><span style="color: rgba(0, 0, 255, 1)">return</span> dataset</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>在 main() 函数中将这些数据变成张量后，再送到 train() 函数中</p>
+<div class="cnblogs_code">
+<pre>train_dataset = load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=<span style="color: rgba(0, 0, 0, 1)">False)
+global_step, tr_loss </span>= train(args, train_dataset, model, tokenizer)</pre>
+</div>
+<h4 id="3203070415">train()<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#3203070415" class="esa-anchor">#</a></h4>
+<p>这里也使用 DataLoader 将数据集变成生成器，用来取出一个 batch 的数据训练</p>
+<div class="cnblogs_code">
+<pre>train_sampler = RandomSampler(train_dataset) <span style="color: rgba(0, 0, 255, 1)">if</span> args.local_rank == -1 <span style="color: rgba(0, 0, 255, 1)">else</span><span style="color: rgba(0, 0, 0, 1)"> DistributedSampler(train_dataset)
+train_dataloader </span>= DataLoader(train_dataset, sampler=train_sampler, batch_size=args.train_batch_size)</pre>
+</div>
+<p>定义优化器</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre>no_decay = [<span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">bias</span><span style="color: rgba(128, 0, 0, 1)">'</span>, <span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">LayerNorm.weight</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(0, 0, 0, 1)">]
+optimizer_grouped_parameters </span>=<span style="color: rgba(0, 0, 0, 1)"> [
+    {</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">params</span><span style="color: rgba(128, 0, 0, 1)">'</span>: [p <span style="color: rgba(0, 0, 255, 1)">for</span> n, p <span style="color: rgba(0, 0, 255, 1)">in</span> model.named_parameters() <span style="color: rgba(0, 0, 255, 1)">if</span> <span style="color: rgba(0, 0, 255, 1)">not</span> any(nd <span style="color: rgba(0, 0, 255, 1)">in</span> n <span style="color: rgba(0, 0, 255, 1)">for</span> nd <span style="color: rgba(0, 0, 255, 1)">in</span> no_decay)], <span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">weight_decay</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(0, 0, 0, 1)">: args.weight_decay},
+    {</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">params</span><span style="color: rgba(128, 0, 0, 1)">'</span>: [p <span style="color: rgba(0, 0, 255, 1)">for</span> n, p <span style="color: rgba(0, 0, 255, 1)">in</span> model.named_parameters() <span style="color: rgba(0, 0, 255, 1)">if</span> any(nd <span style="color: rgba(0, 0, 255, 1)">in</span> n <span style="color: rgba(0, 0, 255, 1)">for</span> nd <span style="color: rgba(0, 0, 255, 1)">in</span> no_decay)], <span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">weight_decay</span><span style="color: rgba(128, 0, 0, 1)">'</span>: 0.0<span style="color: rgba(0, 0, 0, 1)">}
+    ]
+optimizer </span>= AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>还使用了学习率预热，训练时先从小的学习率开始训练</p>
+<div class="cnblogs_code">
+<pre>scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=t_total)</pre>
+</div>
+<p>如果机器上有 apex ，可以通过 --fp16 参数设置，进行加速训练</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><span style="color: rgba(0, 0, 255, 1)">if</span><span style="color: rgba(0, 0, 0, 1)"> args.fp16:
+    </span><span style="color: rgba(0, 0, 255, 1)">try</span><span style="color: rgba(0, 0, 0, 1)">:
+        </span><span style="color: rgba(0, 0, 255, 1)">from</span> apex <span style="color: rgba(0, 0, 255, 1)">import</span><span style="color: rgba(0, 0, 0, 1)"> amp
+    </span><span style="color: rgba(0, 0, 255, 1)">except</span><span style="color: rgba(0, 0, 0, 1)"> ImportError:
+        </span><span style="color: rgba(0, 0, 255, 1)">raise</span> ImportError(<span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">Please install apex from https://www.github.com/nvidia/apex to use fp16 training.</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(0, 0, 0, 1)">)
+    model, optimizer </span>= amp.initialize(model, optimizer, opt_level=args.fp16_opt_level)</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p class="MsoNormal">训练过程设置了 checkpoint，默认每&nbsp;<span lang="EN-US">50&nbsp;</span>个&nbsp;<span lang="EN-US">step&nbsp;</span>保存一次模型，可以通过 --save_steps 修改</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><span style="color: rgba(0, 0, 255, 1)">if</span> args.local_rank <span style="color: rgba(0, 0, 255, 1)">in</span> [-1, 0] <span style="color: rgba(0, 0, 255, 1)">and</span> args.save_steps &gt; 0 <span style="color: rgba(0, 0, 255, 1)">and</span> global_step % args.save_steps ==<span style="color: rgba(0, 0, 0, 1)"> 0:
+    </span><span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> Save model checkpoint</span>
+    output_dir = os.path.join(args.output_dir, <span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">checkpoint-{}</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(0, 0, 0, 1)">.format(global_step))
+    </span><span style="color: rgba(0, 0, 255, 1)">if</span> <span style="color: rgba(0, 0, 255, 1)">not</span><span style="color: rgba(0, 0, 0, 1)"> os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    model_to_save </span>= model.module <span style="color: rgba(0, 0, 255, 1)">if</span> hasattr(model, <span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">module</span><span style="color: rgba(128, 0, 0, 1)">'</span>) <span style="color: rgba(0, 0, 255, 1)">else</span> model  <span style="color: rgba(0, 128, 0, 1)">#</span><span style="color: rgba(0, 128, 0, 1)"> Take care of distributed/parallel training</span>
+<span style="color: rgba(0, 0, 0, 1)">    model_to_save.save_pretrained(output_dir)
+    torch.save(args, os.path.join(output_dir, </span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(128, 0, 0, 1)">training_args.bin</span><span style="color: rgba(128, 0, 0, 1)">'</span><span style="color: rgba(0, 0, 0, 1)">))
+    logger.info(</span><span style="color: rgba(128, 0, 0, 1)">"</span><span style="color: rgba(128, 0, 0, 1)">Saving model checkpoint to %s</span><span style="color: rgba(128, 0, 0, 1)">"</span>, output_dir)</pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="copyCnblogsCode(this)" title="复制代码"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>在 BertForQuestionAnswering 中，它会把 sequence_output 送到一个全连接层中，转换 hidden_size 维度为2，然后split输出，得到 start_logits 和 end_logits</p>
+<p>下面是 BertForQuestionAnswering 中的代码片段，描述了上面说的过程</p>
+<div class="cnblogs_code">
+<pre>logits =<span style="color: rgba(0, 0, 0, 1)"> self.qa_outputs(sequence_output)
+start_logits, end_logits </span>= logits.split(1, dim=-1)</pre>
+</div>
+<p>start_logits 和 end_logits 就是每个 Bert 预测答案开始和结束位置的置信度，这个过程大致如下图所示</p>
+<p><a href="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191204155756525-409078152.png" data-title="" data-alt="" data-lightbox="roadtrip"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191204155756525-409078152.png" alt="" style="display: block; margin-left: auto; margin-right: auto"></a></p>
+<p>BertForQuestionAnswering 计算损失的方式就是 start_logits 和 end_logits 分别计算 loss 再相加取平均</p>
+<div class="cnblogs_code">
+<pre>loss_fct = CrossEntropyLoss(ignore_index=<span style="color: rgba(0, 0, 0, 1)">ignored_index)
+start_loss </span>=<span style="color: rgba(0, 0, 0, 1)"> loss_fct(start_logits, start_positions)
+end_loss </span>=<span style="color: rgba(0, 0, 0, 1)"> loss_fct(end_logits, end_positions)
+total_loss </span>= (start_loss + end_loss) / 2</pre>
+</div>
+<h4 id="3444110242">evaluate()<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#3444110242" class="esa-anchor">#</a></h4>
+<p class="MsoNormal">如果设置了 --do_eval 参数，模型训练完后会进行测试</p>
+<p class="MsoNormal">预测完成后生成的文件有&nbsp;<span lang="EN-US">predictions_.json 和&nbsp;</span><span lang="EN-US">nbest_predictions_.json 等</span></p>
+<p class="MsoNormal">其中&nbsp;<span lang="EN-US"><strong>predictions_.json</strong>&nbsp;</span>记录的是每个问题 i<span lang="EN-US">d&nbsp;</span>对应的<strong>最佳答案</strong>，如下图所示</p>
+<p class="MsoNormal"><a href="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191204160124179-1003793511.png" data-title="" data-alt="" data-lightbox="roadtrip"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191204160124179-1003793511.png" alt="" style="display: block; margin-left: auto; margin-right: auto"></a></p>
+<p><strong>nbest_predictions_.json</strong> 记录的是每个问题 id 对应的 <strong>n 个最佳答案</strong></p>
+<p><strong><a href="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191204160211154-720138083.png" data-title="" data-alt="" data-lightbox="roadtrip"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191204160211154-720138083.png" alt="" style="display: block; margin-left: auto; margin-right: auto"></a></strong></p>
+<p>这是我跑的结果</p>
+<p><a href="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191204160330827-744948983.png" data-title="" data-alt="" data-lightbox="roadtrip"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/1782235-20191204160330827-744948983.png" alt="" style="display: block; margin-left: auto; margin-right: auto"></a></p>
+</div>
+<div id="MySignature" style="display: block;"><div class="esa-post-signature"> 
+                        <p>作者：
+            那少年和狗
+        </p> 
+                        <p>出处：<a href="https://www.cnblogs.com/dogecheng/p/11911909.html">https://www.cnblogs.com/dogecheng/p/11911909.html</a></p> 
+                        <p>版权：本文采用「<a href="https://www.cnblogs.com/dogecheng/p/11911909.html#" target="_blank">CC BY 4.0</a>」知识共享许可协议进行许可。</p> 
+                        <p></p> 
+                    </div></div>
+<div class="clear"></div>
+<div id="blog_post_info_block">
+<div id="EntryTag">
+    标签: 
+            <a href="https://www.cnblogs.com/dogecheng/tag/PyTorch/">PyTorch</a>,             <a href="https://www.cnblogs.com/dogecheng/tag/NLP/">NLP</a></div>
+
+    <div id="blog_post_info">
+<div id="green_channel">
+        <a href="javascript:void(0);" id="green_channel_digg" onclick="DiggIt(11911909,cb_blogId,1);green_channel_success(this,&#39;谢谢推荐！&#39;);">好文要顶</a>
+        <a id="green_channel_follow" onclick="follow(&#39;673b9250-fc8f-4269-7d81-08d72b81ce75&#39;);" href="javascript:void(0);">关注我</a>
+    <a id="green_channel_favorite" onclick="AddToWz(cb_entryId);return false;" href="javascript:void(0);">收藏该文</a>
+    <a id="green_channel_weibo" href="javascript:void(0);" title="分享至新浪微博" onclick="ShareToTsina()"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/icon_weibo_24.png" alt=""></a>
+    <a id="green_channel_wechat" href="javascript:void(0);" title="分享至微信" onclick="shareOnWechat()"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/wechat.png" alt=""></a>
+</div>
+<div id="author_profile">
+    <div id="author_profile_info" class="author_profile_info">
+            <a href="https://home.cnblogs.com/u/dogecheng/" target="_blank"><img src="./手把手教你用Pytorch-Transformers（二）——实战_files/20190907111205.png" class="author_avatar" alt=""></a>
+        <div id="author_profile_detail" class="author_profile_info">
+            <a href="https://home.cnblogs.com/u/dogecheng/">那少年和狗</a><br>
+            <a href="https://home.cnblogs.com/u/dogecheng/followees/">关注 - 3</a><br>
+            <a href="https://home.cnblogs.com/u/dogecheng/followers/">粉丝 - 56</a>
+        </div>
+    </div>
+    <div class="clear"></div>
+    <div id="author_profile_honor"></div>
+    <div id="author_profile_follow">
+                <a href="javascript:void(0);" onclick="follow(&#39;673b9250-fc8f-4269-7d81-08d72b81ce75&#39;);return false;">+加关注</a>
+    </div>
+</div>
+<div id="div_digg">
+    <div class="diggit" onclick="votePost(11911909,&#39;Digg&#39;)">
+        <span class="diggnum" id="digg_count">3</span>
+    </div>
+    <div class="buryit" onclick="votePost(11911909,&#39;Bury&#39;)">
+        <span class="burynum" id="bury_count">0</span>
+    </div>
+    <div class="clear"></div>
+    <div class="diggword" id="digg_tips">
+    </div>
+</div>
+
+<script type="text/javascript">
+    currentDiggType = 0;
+</script></div>
+    <div class="clear"></div>
+    <div id="post_next_prev">
+
+    <a href="https://www.cnblogs.com/dogecheng/p/11938009.html" class="p_n_p_prefix">« </a> 上一篇：    <a href="https://www.cnblogs.com/dogecheng/p/11938009.html" title="发布于 2019-11-27 20:58">PyTorch笔记之 scatter() 函数</a>
+    <br>
+    <a href="https://www.cnblogs.com/dogecheng/p/12494424.html" class="p_n_p_prefix">» </a> 下一篇：    <a href="https://www.cnblogs.com/dogecheng/p/12494424.html" title="发布于 2020-03-14 21:30">pandas根据时间（日期）跨度处理数据</a>
+
+</div>
+</div>
+            </div>
+            <div class="postDesc">posted @ 
+<span id="post-date">2019-12-02 11:05</span>&nbsp;
+<a href="https://www.cnblogs.com/dogecheng/">那少年和狗</a>&nbsp;
+阅读(<span id="post_view_count">13704</span>)&nbsp;
+评论(<span id="post_comment_count">12</span>)&nbsp;
+<a href="https://i.cnblogs.com/EditPosts.aspx?postid=11911909" rel="nofollow">编辑</a>&nbsp;
+<a href="javascript:void(0)" onclick="AddToWz(11911909);return false;">收藏</a>&nbsp;
+<a href="javascript:void(0)" onclick="reportManager.report({ currentUserId: &#39;&#39;, targetType: &#39;blogPost&#39;, targetId: &#39;11911909&#39;, targetLink: &#39;https://www.cnblogs.com/dogecheng/p/11911909.html&#39;, title: &#39;手把手教你用Pytorch-Transformers——实战（二）&#39; })">举报</a></div>
+        </div>
+	    
+	    
+    </div><!--end: topics 文章、评论容器-->
+</div>
+<script src="./手把手教你用Pytorch-Transformers（二）——实战_files/highlight.min.js.下载"></script>
+<script>markdown_highlight();</script>
+<script>
+    var allowComments = true, cb_blogId = 537307, cb_blogApp = 'dogecheng', cb_blogUserGuid = '673b9250-fc8f-4269-7d81-08d72b81ce75';
+    var cb_entryId = 11911909, cb_entryCreatedDate = '2019-12-02 11:05', cb_postType = 1;
+    updatePostStats(
+        [cb_entryId],
+        function(id, count) { $("#post_view_count").text(count) },
+        function(id, count) { $("#post_comment_count").text(count) })
+    zoomManager.apply("#cnblogs_post_body img:not(.code_img_closed):not(.code_img_opened)");
+</script>
+<a name="!comments"></a>
+<div id="blog-comments-placeholder"></div>
+<div id="comment_form" class="commentform">
+    <a name="commentform"></a>
+    <div id="divCommentShow"></div>
+    <div id="comment_nav"><span id="span_refresh_tips"></span><a href="javascript:void(0);" onclick="return RefreshCommentList();" id="lnk_RefreshComments" runat="server" clientidmode="Static">刷新评论</a><a href="https://www.cnblogs.com/dogecheng/p/11911909.html#" onclick="return RefreshPage();">刷新页面</a><a href="https://www.cnblogs.com/dogecheng/p/11911909.html#top">返回顶部</a></div>
+    <div id="comment_form_container" style="visibility: visible;"><div class="login_tips">
+    登录后才能查看或发表评论，立即 <a rel="nofollow" href="javascript:void(0);" class="underline" onclick="return account.login(&#39;!comments&#39;);">登录</a> 或者
+    <a href="https://www.cnblogs.com/">逛逛</a> 博客园首页
+</div>
+</div>
+    <div class="ad_text_commentbox" id="ad_text_under_commentbox"></div>
+    <div id="ad_t2"><a href="https://brands.cnblogs.com/huawei" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-华为专区&#39;)">【推荐】资料合集 | HarmonyOS从入门到大神学习资料下载合集</a><br><a href="http://www.uccpsoft.com/index.htm" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-ucancode&#39;)">【推荐】大型组态、工控、仿真、CAD\GIS 50万行VC++源码免费下载!</a><br><a href="https://www.aliyun.com/activity/daily/bestoffer?userCode=swh7dvlt" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-阿里云-cps&#39;)">【推荐】阿里云爆品销量榜单出炉，精选爆款产品低至0.55折</a><br><a href="http://www.moojnn.com/?source=bokeyuan" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-魔镜&#39;)">【推荐】限时秒杀！国云大数据魔镜，企业级云分析平台</a><br></div>
+    <div id="opt_under_post"></div>
+    <div id="cnblogs_c1" class="under-post-card">
+        <div id="div-gpt-ad-1592365906576-0" style="width: 300px; height: 250px;" data-google-query-id="CJuJj-b-hvECFcNfvQodePcLuA"><div id="google_ads_iframe_/1090369/C1_0__container__" style="border: 0pt none;"><iframe id="google_ads_iframe_/1090369/C1_0" title="3rd party ad content" name="google_ads_iframe_/1090369/C1_0" width="300" height="250" scrolling="no" marginwidth="0" marginheight="0" frameborder="0" allow="conversion-measurement &#39;src&#39;" style="border: 0px; vertical-align: bottom;" data-google-container-id="1" data-load-complete="true" src="./手把手教你用Pytorch-Transformers（二）——实战_files/saved_resource.html"></iframe></div></div>
+    </div>
+    <div id="under_post_card1"><div class="under-post-card"><b>园子动态</b>：<br>· <a href="https://www.cnblogs.com/cmt/p/14585828.html" target="_blank">致园友们的一封检讨书：都是我们的错</a><br>· <a href="https://www.cnblogs.com/cmt/p/14595262.html" target="_blank">数据库实例 CPU 100% 引发全站故障</a><br>· <a href="https://www.cnblogs.com/cmt/p/14217355.html" target="_blank">发起一个开源项目：博客引擎 fluss</a><br></div></div>
+    <div id="cnblogs_c2" class="under-post-card">
+        <div id="div-gpt-ad-1592366332455-0" style="width: 468px; height: 60px;" data-google-query-id="CJyJj-b-hvECFcNfvQodePcLuA"><div id="google_ads_iframe_/1090369/C2_0__container__" style="border: 0pt none;"><iframe id="google_ads_iframe_/1090369/C2_0" title="3rd party ad content" name="google_ads_iframe_/1090369/C2_0" width="468" height="60" scrolling="no" marginwidth="0" marginheight="0" frameborder="0" allow="conversion-measurement &#39;src&#39;" style="border: 0px; vertical-align: bottom;" data-google-container-id="2" data-load-complete="true" src="./手把手教你用Pytorch-Transformers（二）——实战_files/saved_resource(1).html"></iframe></div></div>
+    </div>
+    <div id="under_post_card2"><div class="itnews under-post-card">
+    <b>最新新闻</b>：
+    <br>
+ ·          <a href="https://news.cnblogs.com/n/695496/" target="_blank">利路修代言、生椰拿铁断货……慢下来的瑞幸活得还挺好？</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695500/" target="_blank">26元就能拨5000个骚扰电话？短信、电话骚扰为什么屡禁不止</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695498/" target="_blank">为什么 iPhone 的原装充电线容易坏？</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695501/" target="_blank">一片红海的手机市场，难以真我的Realme</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695514/" target="_blank">苹果新系统很鸿蒙！iPad终于能写代码了，iPhone竟成异地恋神器 | WWDC 2021</a>
+        <br>
+    » <a href="https://news.cnblogs.com/" title="IT 新闻" target="_blank">更多新闻...</a>
+</div></div>
+    <div id="HistoryToday" class="under-post-card"></div>
+    <script type="text/javascript">
+       var commentManager = new blogCommentManager();
+       commentManager.renderComments(0);
+       fixPostBody();
+       deliverBigBanner();
+setTimeout(function() { incrementViewCount(cb_entryId); }, 50);       deliverT2();
+       deliverC1C2();
+       loadNewsAndKb();
+       loadBlogSignature();
+LoadPostCategoriesTags(cb_blogId, cb_entryId);       LoadPostInfoBlock(cb_blogId, cb_entryId, cb_blogApp, cb_blogUserGuid);
+       GetPrevNextPost(cb_entryId, cb_blogId, cb_entryCreatedDate, cb_postType);
+       loadOptUnderPost();
+       GetHistoryToday(cb_blogId, cb_blogApp, cb_entryCreatedDate);
+    </script>
+</div>
+
+	</div><!--end: forFlow -->
+	</div><!--end: mainContent 主体内容容器-->
+	<div id="sideBar">
+		<div id="sideBarMain">
+			<div id="sidebar_news" class="newsItem"><!--done-->
+<h3 class="catListTitle">公告</h3>
+
+<div id="blog-news">
+    <script type="text/javascript">window['__document_write_ajax_callbacks__']['4']();</script><script type="text/javascript">window['__document_write_ajax_callbacks__']['5']();</script><script>window['__document_write_ajax_callbacks__']['1']();</script>
+<script type="text/javascript">window['__document_write_ajax_callbacks__']['6']();</script><script type="text/javascript">window['__document_write_ajax_callbacks__']['2']();</script>
+    <div id="profile_block">
+        昵称：
+        <a href="https://home.cnblogs.com/u/dogecheng/">
+            那少年和狗
+        </a>
+        <br>
+        园龄：
+        <a href="https://home.cnblogs.com/u/dogecheng/" title="入园时间：2019-08-29">
+            1年9个月
+        </a>
+        <br>
+        粉丝：
+        <a href="https://home.cnblogs.com/u/dogecheng/followers/">
+            56
+        </a>
+        <br>
+        关注：
+        <a href="https://home.cnblogs.com/u/dogecheng/followees/">
+            3
+        </a>
+        <div id="p_b_follow">
+<a href="javascript:void(0)" onclick="follow(&#39;673b9250-fc8f-4269-7d81-08d72b81ce75&#39;)">+加关注</a></div>
+        <script type="text/javascript">window['__document_write_ajax_callbacks__']['7']();</script><script>window['__document_write_ajax_callbacks__']['3']();</script>
+    </div>
+</div>
+
+</div>
+<div id="sidebar_c3"></div>
+			<div id="blog-calendar" style="">
+
+<table id="blogCalendar" class="Cal" cellspacing="0" cellpadding="0" title="Calendar" border="0">
+    <tbody>
+        <tr>
+            <td colspan="7">
+                <table class="CalTitle" cellspacing="0" border="0">
+                    <tbody>
+                        <tr>
+                            <td class="CalNextPrev">
+                                <a href="javascript:void(0);" onclick="loadBlogCalendar(&#39;2021/05/08&#39;); return false;">&lt;</a>
+                            </td>
+                            <td align="center">2021年6月</td>
+                            <td align="right" class="CalNextPrev">
+                                <a href="javascript:void(0);" onclick="loadBlogCalendar(&#39;2021/07/08&#39;); return false;">&gt;</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    <tr>
+        <th class="CalDayHeader" align="center" abbr="日" scope="col">日</th>
+        <th class="CalDayHeader" align="center" abbr="一" scope="col">一</th>
+        <th class="CalDayHeader" align="center" abbr="二" scope="col">二</th>
+        <th class="CalDayHeader" align="center" abbr="三" scope="col">三</th>
+        <th class="CalDayHeader" align="center" abbr="四" scope="col">四</th>
+        <th class="CalDayHeader" align="center" abbr="五" scope="col">五</th>
+        <th class="CalDayHeader" align="center" abbr="六" scope="col">六</th>
+    </tr>
+            <tr>
+                            <td class="CalOtherMonthDay" align="center">30</td>
+                            <td class="CalOtherMonthDay" align="center">31</td>
+                        <td class="" align="center">
+                            1
+                        </td>
+                        <td class="" align="center">
+                            2
+                        </td>
+                        <td class="" align="center">
+                            3
+                        </td>
+                        <td class="" align="center">
+                            4
+                        </td>
+                    <td class="CalWeekendDay" align="center">
+                        5
+                    </td>
+            </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            6
+                        </td>
+                            <td class="" align="center">
+                                7
+                            </td>
+                            <td class="CalTodayDay" align="center">
+                                8
+                            </td>
+                            <td class="" align="center">
+                                9
+                            </td>
+                            <td class="" align="center">
+                                10
+                            </td>
+                            <td class="" align="center">
+                                11
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            12
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            13
+                        </td>
+                            <td class="" align="center">
+                                14
+                            </td>
+                            <td class="" align="center">
+                                15
+                            </td>
+                            <td class="" align="center">
+                                16
+                            </td>
+                            <td class="" align="center">
+                                17
+                            </td>
+                            <td class="" align="center">
+                                18
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            19
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            20
+                        </td>
+                            <td class="" align="center">
+                                21
+                            </td>
+                            <td class="" align="center">
+                                22
+                            </td>
+                            <td class="" align="center">
+                                23
+                            </td>
+                            <td class="" align="center">
+                                24
+                            </td>
+                            <td class="" align="center">
+                                25
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            26
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            27
+                        </td>
+                            <td class="" align="center">
+                                28
+                            </td>
+                            <td class="" align="center">
+                                29
+                            </td>
+                            <td class="" align="center">
+                                30
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                1
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                2
+                            </td>
+                        <td class="CalOtherMonthDay" align="center">
+                            3
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalOtherMonthDay" align="center">
+                            4
+                        </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                5
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                6
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                7
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                8
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                9
+                            </td>
+                        <td class="CalOtherMonthDay" align="center">
+                            10
+                        </td>
+                </tr>
+    </tbody>
+</table></div><script>loadBlogDefaultCalendar();</script>			
+			<div id="leftcontentcontainer">
+				<div id="blog-sidecolumn"><!-- 搜索 -->
+<div id="sidebar_search" class="sidebar-block">
+    <div id="sidebar_search" class="mySearch">
+        <h3 class="catListTitle">搜索</h3>
+        <div id="sidebar_search_box">
+            <div id="widget_my_zzk" class="div_my_zzk">
+                <input type="text" id="q" onkeydown="return zzk_go_enter(event);" class="input_my_zzk">&nbsp;<input onclick="zzk_go()" type="button" value="找找看" id="btnZzk" class="btn_my_zzk">
+            </div>
+            <div id="widget_my_google" class="div_my_zzk">
+                <input type="text" name="google_q" id="google_q" onkeydown="return google_go_enter(event);" class="input_my_zzk">&nbsp;<input onclick="google_go()" type="button" value="谷歌搜索" class="btn_my_zzk">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 常用链接 -->
+<div id="sidebar_shortcut" class="sidebar-block"><div class="catListLink">
+<h3 class="catListTitle">
+常用链接
+</h3>
+<ul>
+    
+<li><a href="https://www.cnblogs.com/dogecheng/p/" title="我的博客的随笔列表">我的随笔</a></li>
+<li><a href="https://www.cnblogs.com/dogecheng/MyComments.html" title="我的发表过的评论列表">我的评论</a></li>
+<li><a href="https://www.cnblogs.com/dogecheng/OtherPosts.html" title="我评论过的随笔列表">我的参与</a></li>
+<li><a href="https://www.cnblogs.com/dogecheng/RecentComments.html" title="我的博客的评论列表">最新评论</a></li>
+<li><a href="https://www.cnblogs.com/dogecheng/tag/" title="我的博客的标签列表">我的标签</a></li>
+
+</ul>
+</div>
+
+</div>
+
+<!-- 最新随笔 -->
+
+
+<!-- 我的标签 -->
+<div id="sidebar_toptags" class="sidebar-block"><div class="catListTag">
+<h3 class="catListTitle">我的标签</h3>
+<ul>
+        <li>
+            <a href="https://www.cnblogs.com/dogecheng/tag/Python/">Python<span class="tag-count">(11)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/dogecheng/tag/Web%E5%AE%89%E5%85%A8/">Web安全<span class="tag-count">(11)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/dogecheng/tag/NLP/">NLP<span class="tag-count">(11)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/dogecheng/tag/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/">深度学习<span class="tag-count">(10)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/dogecheng/tag/Pikachu/">Pikachu<span class="tag-count">(9)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/dogecheng/tag/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/">渗透测试<span class="tag-count">(6)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/dogecheng/tag/Kali/">Kali<span class="tag-count">(5)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/dogecheng/tag/MSF/">MSF<span class="tag-count">(5)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/dogecheng/tag/PyTorch/">PyTorch<span class="tag-count">(5)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/dogecheng/tag/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/">机器学习<span class="tag-count">(5)</span></a>
+        </li>
+    <li>
+        <a href="https://www.cnblogs.com/dogecheng/tag/">更多</a>
+    </li>
+
+</ul>
+</div>
+
+</div>
+
+<!-- 积分与排名 -->
+
+
+<!-- 随笔分类、随笔档案、文章分类、新闻分类、相册、链接 -->
+<div id="sidebar_categories">
+
+    <div id="sidebar_postarchive" class="catListPostArchive sidebar-block">
+        <h3 class="catListTitle">
+            
+随笔档案
+
+
+
+        </h3>
+
+        <ul>
+
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/dogecheng/archive/2020/06.html" rel="" target="">
+    2020年6月(1)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/dogecheng/archive/2020/05.html" rel="" target="">
+    2020年5月(1)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/dogecheng/archive/2020/04.html" rel="" target="">
+    2020年4月(3)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/dogecheng/archive/2020/03.html" rel="" target="">
+    2020年3月(2)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/dogecheng/archive/2019/12.html" rel="" target="">
+    2019年12月(1)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/dogecheng/archive/2019/11.html" rel="" target="">
+    2019年11月(7)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/dogecheng/archive/2019/10.html" rel="" target="">
+    2019年10月(12)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/dogecheng/archive/2019/09.html" rel="" target="">
+    2019年9月(17)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/dogecheng/archive/2019/08.html" rel="" target="">
+    2019年8月(1)
+</a>
+ 
+
+                </li>                
+            
+        </ul>
+
+
+    </div>    
+</div>
+
+<!-- 最新评论 -->
+<div id="sidebar_recentcomments" class="sidebar-block"><div class="catListComment">
+<h3 class="catListTitle">最新评论</h3>
+
+	<div class="RecentCommentBlock">
+        <ul>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/dogecheng/p/11565530.html">1. Re:Embedding和Word2Vec实战</a></li>
+                    <li class="recent_comment_body">你不能用keys（）映射所有单词的索引 vocab_list =list（w2v_model.wv.vocab.keys（）） 要用w2v_model.wv.word2indx（）回传的顺序才是正确的...</li>
+                    <li class="recent_comment_author">--leeprinxin</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/dogecheng/p/11911909.html">2. Re:手把手教你用Pytorch-Transformers——实战（二）</a></li>
+                    <li class="recent_comment_body"><p>太强了，太清晰了</p>
+</li>
+                    <li class="recent_comment_author">--stillyuyi</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/dogecheng/p/11556221.html">3. Re:Pikachu漏洞练习平台实验——XSS（二）</a></li>
+                    <li class="recent_comment_body"><p>颇有收益，谢谢</p>
+</li>
+                    <li class="recent_comment_author">--米一の本屋</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/dogecheng/p/11478953.html">4. Re:MSF——Payload模块（二）</a></li>
+                    <li class="recent_comment_body"><p>generate是不是被msfvenom代替了？</p>
+</li>
+                    <li class="recent_comment_author">--追得上的梦想</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/dogecheng/p/11911909.html">5. Re:手把手教你用Pytorch-Transformers——实战（二）</a></li>
+                    <li class="recent_comment_body">@xinjicong 是的。。明白了，感谢回复~~...</li>
+                    <li class="recent_comment_author">--wa007</li>
+        </ul>
+    </div>
+</div>
+
+</div>
+
+
+<!-- 阅读排行榜 -->
+<div id="sidebar_topviewedposts" class="sidebar-block"><div class="catListView">
+<h3 class="catListTitle">阅读排行榜</h3>
+	<div id="TopViewPostsBlock">
+        <ul style="word-break:break-all">
+                    <li>
+                        <a href="https://www.cnblogs.com/dogecheng/p/11466687.html">
+                            1. 正则表达式中(?:pattern)、(?=pattern)、(?!pattern)、(?&lt;=pattern)和(?&lt;!pattern)(21507)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/dogecheng/p/11617940.html">
+                            2. BERT实战——基于Keras(20783)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/dogecheng/p/11904286.html">
+                            3. 在VS Code中使用Jupyter Notebook(19764)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/dogecheng/p/11938009.html">
+                            4. PyTorch笔记之 scatter() 函数(19498)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/dogecheng/p/11450423.html">
+                            5. MSF——基本使用和Exploit模块（一）(15635)
+                        </a>
+                    </li>
+        </ul>
+    </div>
+</div>
+
+</div>
+
+<!-- 评论排行榜 -->
+<div id="sidebar_topcommentedposts" class="sidebar-block"><div class="catListFeedback">
+<h3 class="catListTitle">评论排行榜</h3>
+	<div id="TopFeedbackPostsBlock">
+        <ul style="word-break:break-all">
+                    <li>
+                        <a href="https://www.cnblogs.com/dogecheng/p/11911909.html">
+                            1. 手把手教你用Pytorch-Transformers——实战（二）(12)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/dogecheng/p/11556221.html">
+                            2. Pikachu漏洞练习平台实验——XSS（二）(6)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/dogecheng/p/11542541.html">
+                            3. Pikachu漏洞练习平台实验——暴力破解（一）(6)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/dogecheng/p/11617940.html">
+                            4. BERT实战——基于Keras(4)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/dogecheng/p/11565530.html">
+                            5. Embedding和Word2Vec实战(4)
+                        </a>
+                    </li>
+        </ul>
+    </div>
+</div>
+
+</div>
+
+<!-- 推荐排行榜 -->
+<div id="sidebar_topdiggedposts" class="sidebar-block">
+<div id="topdigg_posts_wrap">
+    <div class="catListView">
+        <h3 class="catListTitle">推荐排行榜</h3>
+        <div id="TopDiggPostsBlock">
+            <ul style="word-break: break-all">
+                        <li>
+                            <a href="https://www.cnblogs.com/dogecheng/p/11907036.html">
+                                1. 手把手教你用Pytorch-Transformers——部分源码解读及相关说明（一）(5)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/dogecheng/p/11556221.html">
+                                2. Pikachu漏洞练习平台实验——XSS（二）(5)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/dogecheng/p/11441088.html">
+                                3. Python中@staticmethod和@classmethod的作用和区别(5)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/dogecheng/p/11938009.html">
+                                4. PyTorch笔记之 scatter() 函数(4)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/dogecheng/p/11911909.html">
+                                5. 手把手教你用Pytorch-Transformers——实战（二）(3)
+                            </a>
+                        </li>
+            </ul>
+        </div>
+    </div>
+</div></div></div>
+                    <script>loadBlogSideColumn();</script>
+			</div>			
+		</div><!--end: sideBarMain -->
+	</div><!--end: sideBar 侧边栏容器 -->
+	<div class="clear"></div>
+	</div><!--end: main -->
+	<div class="clear"></div>
+	<div id="footer">
+		<!--done-->
+Copyright © 2021 那少年和狗
+<br><span id="poweredby">Powered by .NET 5.0 on Kubernetes</span>
+
+
+
+	<span class="esa-copyright">&amp; Theme <a href="https://github.com/esofar/cnblogs-theme-silence" target="_blank">Silence v2.0.2</a></span></div><!--end: footer -->
+</div><!--end: home 自定义的最大容器 -->
+
+
+    
+
+    <input type="hidden" id="antiforgery_token" value="CfDJ8L-rpLgFVEJMgssCVvNUAjvRX1e8C9VM1B0xm7lu_laaOLHN-ROehqKhT4EXxl47scYkhQ3TZKnQYbFvA_N0becAvGsOk9FY85IZU3tfbaP1MNbSSCVQCc71RDbsQXBNzryuUqThpVilvcCW8p8yDBg">
+
+
+<script type="text/javascript">
+    $.silence({
+	base: {
+            avatar: 'https://pic.cnblogs.com/avatar/1782235/20190907111205.png',
+            favicon: 'https://www.cnblogs.com/images/cnblogs_com/benjieqiang/1508613/t_Github_32px_1230449_easyicon.net.png',
+        },
+        catalog: {
+            enable: true,
+            move: true,
+            index: true,
+            level1: 'h2',
+            level2: 'h3',
+            level3: 'h4',
+        },
+        signature: {
+            enable: true,
+            home: 'https://www.cnblogs.com/dogecheng/',
+            license: 'CC BY 4.0',
+            link: '#'
+        },
+        sponsor: {
+            enable: false,
+            paypal: null,
+            wechat: 'https://pic.cnblogs.com/avatar/1782235/20190907111205.png',
+            alipay: 'https://pic.cnblogs.com/avatar/1782235/20190907111205.png'
+        },
+        github: {
+            enable: true,
+            link: 'https://gitee.com/dogecheng'
+        }
+    });
+</script><a href="https://gitee.com/dogecheng" class="github-corner" title="Fork me on GitHub" target="_self">
+                        <svg width="60" height="60" viewBox="0 0 250 250" style=" color:#fff; z-index: 999; position: fixed; top: 0; border: 0; left: 0; transform: scale(-1, 1);" aria-hidden="true">
+                            <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+                            <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+                            <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
+                        </svg>
+                    </a><div class="esa-catalog">
+                        <div class="esa-catalog-contents" style="display: block;">
+                            <div class="esa-catalog-title">CONTENTS</div>
+                            <a class="esa-catalog-close">✕</a>
+                        <ul><li class="li_h2" title="情感分类任务">
+                            <i class="1557950772"></i><a class="esa-anchor-link"><span class="level1">1. </span>情感分类任务</a>
+                        </li><li class="li_h3" title="用Dataset表示数据集">
+                            <i class="1687308134"></i><a class="esa-anchor-link"><span class="level2">1.1. </span>用Dataset表示数据集</a>
+                        </li><li class="li_h3" title="编写模型">
+                            <i class="3944424336"></i><a class="esa-anchor-link"><span class="level2">1.2. </span>编写模型</a>
+                        </li><li class="li_h3" title="读取数据集">
+                            <i class="18177863"></i><a class="esa-anchor-link"><span class="level2">1.3. </span>读取数据集</a>
+                        </li><li class="li_h3" title="数据处理">
+                            <i class="496958553"></i><a class="esa-anchor-link"><span class="level2">1.4. </span>数据处理</a>
+                        </li><li class="li_h3" title="定义优化器和损失函数">
+                            <i class="1575696445"></i><a class="esa-anchor-link"><span class="level2">1.5. </span>定义优化器和损失函数</a>
+                        </li><li class="li_h3" title="定义训练和验证函数">
+                            <i class="2088983941"></i><a class="esa-anchor-link"><span class="level2">1.6. </span>定义训练和验证函数</a>
+                        </li><li class="li_h3" title="开始训练">
+                            <i class="1272983701"></i><a class="esa-anchor-link"><span class="level2">1.7. </span>开始训练</a>
+                        </li><li class="li_h2" title=" SQuAD任务">
+                            <i class="2341663145"></i><a class="esa-anchor-link"><span class="level1">2. </span>&nbsp;SQuAD任务</a>
+                        </li><li class="li_h3" title="官方例子的使用">
+                            <i class="357584314"></i><a class="esa-anchor-link"><span class="level2">2.1. </span>官方例子的使用</a>
+                        </li><li class="li_h3" title="utils_squad.py">
+                            <i class="81865228"></i><a class="esa-anchor-link"><span class="level2">2.2. </span>utils_squad.py</a>
+                        </li><li class="li_h4" title="read_squad_examples()">
+                            <i class="3327931400"></i><a class="esa-anchor-link"><span class="level3">2.2.1. </span>read_squad_examples()</a>
+                        </li><li class="li_h4" title="convert_examples_to_features()">
+                            <i class="4102710591"></i><a class="esa-anchor-link"><span class="level3">2.2.2. </span>convert_examples_to_features()</a>
+                        </li><li class="li_h3" title="run_squad.py">
+                            <i class="3554259658"></i><a class="esa-anchor-link"><span class="level2">2.3. </span>run_squad.py</a>
+                        </li><li class="li_h4" title="准备数据集">
+                            <i class="1874485555"></i><a class="esa-anchor-link"><span class="level3">2.3.1. </span>准备数据集</a>
+                        </li><li class="li_h4" title="train()">
+                            <i class="3203070415"></i><a class="esa-anchor-link"><span class="level3">2.3.2. </span>train()</a>
+                        </li><li class="li_h4" title="evaluate()">
+                            <i class="3444110242"></i><a class="esa-anchor-link"><span class="level3">2.3.3. </span>evaluate()</a>
+                        </li></ul></div>
+                    </div><div class="esa-toolbar">
+                <button class="esa-toolbar-gotop" data-tips="返回顶部"></button>
+                <button class="esa-toolbar-contents" data-tips="阅读目录"></button>
+                <button class="esa-toolbar-follow" data-tips="关注博主"></button>
+            </div><script type="text/javascript">getFollowStatus('673b9250-fc8f-4269-7d81-08d72b81ce75');</script><div id="lightboxOverlay" tabindex="-1" class="lightboxOverlay" style="display: none;"></div><div id="lightbox" tabindex="-1" class="lightbox" style="display: none;"><div class="lb-outerContainer"><div class="lb-container"><img class="lb-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" alt=""><div class="lb-nav"><a class="lb-prev" aria-label="Previous image" href="https://www.cnblogs.com/dogecheng/p/11911909.html"></a><a class="lb-next" aria-label="Next image" href="https://www.cnblogs.com/dogecheng/p/11911909.html"></a></div><div class="lb-loader"><a class="lb-cancel"></a></div></div></div><div class="lb-dataContainer"><div class="lb-data"><div class="lb-details"><span class="lb-caption"></span><span class="lb-number"></span></div><div class="lb-closeContainer"><a class="lb-close"></a></div></div></div></div><iframe id="google_osd_static_frame_8081417253199" name="google_osd_static_frame" style="display: none; width: 0px; height: 0px;" src="./手把手教你用Pytorch-Transformers（二）——实战_files/saved_resource(2).html"></iframe><iframe src="./手把手教你用Pytorch-Transformers（二）——实战_files/aframe.html" width="0" height="0" style="display: none;"></iframe></body></html>

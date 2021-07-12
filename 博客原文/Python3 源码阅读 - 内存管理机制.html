@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<!-- saved from url=(0045)https://www.cnblogs.com/panlq/p/13056907.html -->
+<html lang="zh-cn"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="never">
+    <meta name="description" content="python 内存管理机制，pymalloc， 对象池">
+    <meta property="og:description" content="python 内存管理机制，pymalloc， 对象池">
+    <meta http-equiv="Cache-Control" content="no-transform">
+    <meta http-equiv="Cache-Control" content="no-siteapp">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Python3 源码阅读 - 内存管理机制 - JonPan - 博客园</title>
+    <link id="favicon" rel="shortcut icon" href="https://common.cnblogs.com/favicon.svg" type="image/svg+xml">
+    
+    <link rel="stylesheet" href="./Python3 源码阅读 - 内存管理机制_files/blog-common.min.css">
+    <link id="MainCss" rel="stylesheet" href="./Python3 源码阅读 - 内存管理机制_files/bundle-custom.min.css">
+    <link type="text/css" rel="stylesheet" href="./Python3 源码阅读 - 内存管理机制_files/custom.css">
+    <link id="mobile-style" media="only screen and (max-width: 767px)" type="text/css" rel="stylesheet" href="./Python3 源码阅读 - 内存管理机制_files/bundle-custom-mobile.min.css">
+    
+    <link type="application/rss+xml" rel="alternate" href="https://www.cnblogs.com/panlq/rss">
+    <link type="application/rsd+xml" rel="EditURI" href="https://www.cnblogs.com/panlq/rsd.xml">
+    <link type="application/wlwmanifest+xml" rel="wlwmanifest" href="https://www.cnblogs.com/panlq/wlwmanifest.xml">
+    <script src="./Python3 源码阅读 - 内存管理机制_files/osd.js.下载"></script><script async="" src="./Python3 源码阅读 - 内存管理机制_files/analytics.js.下载"></script><script>
+        var currentBlogId = 416394;
+        var currentBlogApp = 'panlq';
+        var cb_enable_mathjax = true;
+        var isLogined = false;
+        var isBlogOwner = false;
+        var skinName = 'Custom';
+        var visitorUserId = '';
+    </script>
+        <script>
+            var currentPostDateAdded = '2020-06-06 10:33';
+        </script>
+    <script src="./Python3 源码阅读 - 内存管理机制_files/jquery-2.2.0.min.js.下载"></script>
+    <script src="./Python3 源码阅读 - 内存管理机制_files/blog-common.min.js.下载"></script><style type="text/css">.medium-zoom-overlay{position:fixed;top:0;right:0;bottom:0;left:0;opacity:0;transition:opacity .3s;will-change:opacity}.medium-zoom--opened .medium-zoom-overlay{cursor:pointer;cursor:zoom-out;opacity:1}.medium-zoom-image{cursor:pointer;cursor:zoom-in;transition:transform .3s cubic-bezier(.2,0,.2,1)!important}.medium-zoom-image--hidden{visibility:hidden}.medium-zoom-image--opened{position:relative;cursor:pointer;cursor:zoom-out;will-change:transform}</style>
+    <script type="text/x-mathjax-config;executed=true">
+        MathJax.Hub.Config({
+        tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']], processClass: 'math', processEscapes: true },
+        TeX: {
+        equationNumbers: { autoNumber: ['AMS'], useLabelIds: true },
+        extensions: ['extpfeil.js', 'mediawiki-texvc.js'],
+        Macros: {bm: "\\boldsymbol"}
+        },
+        'HTML-CSS': { linebreaks: { automatic: true } },
+        SVG: { linebreaks: { automatic: true } }
+        });
+    </script>
+    <script src="./Python3 源码阅读 - 内存管理机制_files/MathJax.js.下载"></script>
+    
+<style type="text/css">.MathJax_Hover_Frame {border-radius: .25em; -webkit-border-radius: .25em; -moz-border-radius: .25em; -khtml-border-radius: .25em; box-shadow: 0px 0px 15px #83A; -webkit-box-shadow: 0px 0px 15px #83A; -moz-box-shadow: 0px 0px 15px #83A; -khtml-box-shadow: 0px 0px 15px #83A; border: 1px solid #A6D ! important; display: inline-block; position: absolute}
+.MathJax_Menu_Button .MathJax_Hover_Arrow {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; -khtml-border-radius: 4px; font-family: 'Courier New',Courier; font-size: 9px; color: #F0F0F0}
+.MathJax_Menu_Button .MathJax_Hover_Arrow span {display: block; background-color: #AAA; border: 1px solid; border-radius: 3px; line-height: 0; padding: 4px}
+.MathJax_Hover_Arrow:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_Hover_Arrow:hover span {background-color: #CCC!important}
+</style><style type="text/css">#MathJax_About {position: fixed; left: 50%; width: auto; text-align: center; border: 3px outset; padding: 1em 2em; background-color: #DDDDDD; color: black; cursor: default; font-family: message-box; font-size: 120%; font-style: normal; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 15px; -webkit-border-radius: 15px; -moz-border-radius: 15px; -khtml-border-radius: 15px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_About.MathJax_MousePost {outline: none}
+.MathJax_Menu {position: absolute; background-color: white; color: black; width: auto; padding: 2px; border: 1px solid #CCCCCC; margin: 0; cursor: default; font: menu; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+.MathJax_MenuItem {padding: 2px 2em; background: transparent}
+.MathJax_MenuArrow {position: absolute; right: .5em; padding-top: .25em; color: #666666; font-size: .75em}
+.MathJax_MenuActive .MathJax_MenuArrow {color: white}
+.MathJax_MenuArrow.RTL {left: .5em; right: auto}
+.MathJax_MenuCheck {position: absolute; left: .7em}
+.MathJax_MenuCheck.RTL {right: .7em; left: auto}
+.MathJax_MenuRadioCheck {position: absolute; left: 1em}
+.MathJax_MenuRadioCheck.RTL {right: 1em; left: auto}
+.MathJax_MenuLabel {padding: 2px 2em 4px 1.33em; font-style: italic}
+.MathJax_MenuRule {border-top: 1px solid #CCCCCC; margin: 4px 1px 0px}
+.MathJax_MenuDisabled {color: GrayText}
+.MathJax_MenuActive {background-color: Highlight; color: HighlightText}
+.MathJax_MenuDisabled:focus, .MathJax_MenuLabel:focus {background-color: #E8E8E8}
+.MathJax_ContextMenu:focus {outline: none}
+.MathJax_ContextMenu .MathJax_MenuItem:focus {outline: none}
+#MathJax_AboutClose {top: .2em; right: .2em}
+.MathJax_Menu .MathJax_MenuClose {top: -10px; left: -10px}
+.MathJax_MenuClose {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; font-family: 'Courier New',Courier; font-size: 24px; color: #F0F0F0}
+.MathJax_MenuClose span {display: block; background-color: #AAA; border: 1.5px solid; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; line-height: 0; padding: 8px 0 6px}
+.MathJax_MenuClose:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_MenuClose:hover span {background-color: #CCC!important}
+.MathJax_MenuClose:hover:focus {outline: none}
+</style><style type="text/css">.MathJax_Preview .MJXf-math {color: inherit!important}
+</style><style type="text/css">.MJX_Assistive_MathML {position: absolute!important; top: 0; left: 0; clip: rect(1px, 1px, 1px, 1px); padding: 1px 0 0 0!important; border: 0!important; height: 1px!important; width: 1px!important; overflow: hidden!important; display: block!important; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none}
+.MJX_Assistive_MathML.MJX_Assistive_MathML_Block {width: 100%!important}
+</style><style type="text/css">#MathJax_Zoom {position: absolute; background-color: #F0F0F0; overflow: auto; display: block; z-index: 301; padding: .5em; border: 1px solid black; margin: 0; font-weight: normal; font-style: normal; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; -webkit-box-sizing: content-box; -moz-box-sizing: content-box; box-sizing: content-box; box-shadow: 5px 5px 15px #AAAAAA; -webkit-box-shadow: 5px 5px 15px #AAAAAA; -moz-box-shadow: 5px 5px 15px #AAAAAA; -khtml-box-shadow: 5px 5px 15px #AAAAAA; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_ZoomOverlay {position: absolute; left: 0; top: 0; z-index: 300; display: inline-block; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+#MathJax_ZoomFrame {position: relative; display: inline-block; height: 0; width: 0}
+#MathJax_ZoomEventTrap {position: absolute; left: 0; top: 0; z-index: 302; display: inline-block; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+</style><style type="text/css">.MathJax_Preview {color: #888}
+#MathJax_Message {position: fixed; left: 1em; bottom: 1.5em; background-color: #E6E6E6; border: 1px solid #959595; margin: 0px; padding: 2px 8px; z-index: 102; color: black; font-size: 80%; width: auto; white-space: nowrap}
+#MathJax_MSIE_Frame {position: absolute; top: 0; left: 0; width: 0px; z-index: 101; border: 0px; margin: 0px; padding: 0px}
+.MathJax_Error {color: #CC0000; font-style: italic}
+</style><style type="text/css">.MJXp-script {font-size: .8em}
+.MJXp-right {-webkit-transform-origin: right; -moz-transform-origin: right; -ms-transform-origin: right; -o-transform-origin: right; transform-origin: right}
+.MJXp-bold {font-weight: bold}
+.MJXp-italic {font-style: italic}
+.MJXp-scr {font-family: MathJax_Script,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-frak {font-family: MathJax_Fraktur,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-sf {font-family: MathJax_SansSerif,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-cal {font-family: MathJax_Caligraphic,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-mono {font-family: MathJax_Typewriter,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-largeop {font-size: 150%}
+.MJXp-largeop.MJXp-int {vertical-align: -.2em}
+.MJXp-math {display: inline-block; line-height: 1.2; text-indent: 0; font-family: 'Times New Roman',Times,STIXGeneral,serif; white-space: nowrap; border-collapse: collapse}
+.MJXp-display {display: block; text-align: center; margin: 1em 0}
+.MJXp-math span {display: inline-block}
+.MJXp-box {display: block!important; text-align: center}
+.MJXp-box:after {content: " "}
+.MJXp-rule {display: block!important; margin-top: .1em}
+.MJXp-char {display: block!important}
+.MJXp-mo {margin: 0 .15em}
+.MJXp-mfrac {margin: 0 .125em; vertical-align: .25em}
+.MJXp-denom {display: inline-table!important; width: 100%}
+.MJXp-denom > * {display: table-row!important}
+.MJXp-surd {vertical-align: top}
+.MJXp-surd > * {display: block!important}
+.MJXp-script-box > *  {display: table!important; height: 50%}
+.MJXp-script-box > * > * {display: table-cell!important; vertical-align: top}
+.MJXp-script-box > *:last-child > * {vertical-align: bottom}
+.MJXp-script-box > * > * > * {display: block!important}
+.MJXp-mphantom {visibility: hidden}
+.MJXp-munderover, .MJXp-munder {display: inline-table!important}
+.MJXp-over {display: inline-block!important; text-align: center}
+.MJXp-over > * {display: block!important}
+.MJXp-munderover > *, .MJXp-munder > * {display: table-row!important}
+.MJXp-mtable {vertical-align: .25em; margin: 0 .125em}
+.MJXp-mtable > * {display: inline-table!important; vertical-align: middle}
+.MJXp-mtr {display: table-row!important}
+.MJXp-mtd {display: table-cell!important; text-align: center; padding: .5em 0 0 .5em}
+.MJXp-mtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-mlabeledtr {display: table-row!important}
+.MJXp-mlabeledtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mlabeledtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-merror {background-color: #FFFF88; color: #CC0000; border: 1px solid #CC0000; padding: 1px 3px; font-style: normal; font-size: 90%}
+.MJXp-scale0 {-webkit-transform: scaleX(.0); -moz-transform: scaleX(.0); -ms-transform: scaleX(.0); -o-transform: scaleX(.0); transform: scaleX(.0)}
+.MJXp-scale1 {-webkit-transform: scaleX(.1); -moz-transform: scaleX(.1); -ms-transform: scaleX(.1); -o-transform: scaleX(.1); transform: scaleX(.1)}
+.MJXp-scale2 {-webkit-transform: scaleX(.2); -moz-transform: scaleX(.2); -ms-transform: scaleX(.2); -o-transform: scaleX(.2); transform: scaleX(.2)}
+.MJXp-scale3 {-webkit-transform: scaleX(.3); -moz-transform: scaleX(.3); -ms-transform: scaleX(.3); -o-transform: scaleX(.3); transform: scaleX(.3)}
+.MJXp-scale4 {-webkit-transform: scaleX(.4); -moz-transform: scaleX(.4); -ms-transform: scaleX(.4); -o-transform: scaleX(.4); transform: scaleX(.4)}
+.MJXp-scale5 {-webkit-transform: scaleX(.5); -moz-transform: scaleX(.5); -ms-transform: scaleX(.5); -o-transform: scaleX(.5); transform: scaleX(.5)}
+.MJXp-scale6 {-webkit-transform: scaleX(.6); -moz-transform: scaleX(.6); -ms-transform: scaleX(.6); -o-transform: scaleX(.6); transform: scaleX(.6)}
+.MJXp-scale7 {-webkit-transform: scaleX(.7); -moz-transform: scaleX(.7); -ms-transform: scaleX(.7); -o-transform: scaleX(.7); transform: scaleX(.7)}
+.MJXp-scale8 {-webkit-transform: scaleX(.8); -moz-transform: scaleX(.8); -ms-transform: scaleX(.8); -o-transform: scaleX(.8); transform: scaleX(.8)}
+.MJXp-scale9 {-webkit-transform: scaleX(.9); -moz-transform: scaleX(.9); -ms-transform: scaleX(.9); -o-transform: scaleX(.9); transform: scaleX(.9)}
+.MathJax_PHTML .noError {vertical-align: ; font-size: 90%; text-align: left; color: black; padding: 1px 3px; border: 1px solid}
+</style><meta http-equiv="origin-trial" content="A+b/H0b8RPXNaJgaNFpO0YOFuGK6myDQXlwnJB3SwzvNMfcndat4DZYMrP4ClJIzYWo3/yP2S+8FTZ/lpqbPAAEAAABueyJvcmlnaW4iOiJodHRwczovL2ltYXNkay5nb29nbGVhcGlzLmNvbTo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzVGhpcmRQYXJ0eSI6dHJ1ZX0="><meta http-equiv="origin-trial" content="A9ZgbRtm4pU3oZiuNzOsKcC8ppFSZdcjP2qYcdQrFKVzkmiWH1kdYY1Mi9x7G8+PS8HV9Ha9Cz0gaMdKsiVZIgMAAAB7eyJvcmlnaW4iOiJodHRwczovL2RvdWJsZWNsaWNrLm5ldDo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AxL6oBxcpn5rQDPKSAs+d0oxNyJYq2/4esBUh3Yx5z8QfcLu+AU8iFCXYRcr/CEEfDnkxxLTsvXPJFQBxHfvkgMAAACBeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXRhZ3NlcnZpY2VzLmNvbTo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="A9KPtG5kl3oLTk21xqynDPGQ5t18bSOpwt0w6kGa6dEWbuwjpffmdUpR3W+faZDubGT+KIk2do0BX2ca16x8qAcAAACBeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXN5bmRpY2F0aW9uLmNvbTo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="A3HucHUo1oW9s+9kIKz8mLkbcmdaj5lxt3eiIMp1Nh49dkkBlg1Fhg4Fd/r0vL69mRRA36YutI9P/lJUfL8csQoAAACFeyJvcmlnaW4iOiJodHRwczovL2RvdWJsZWNsaWNrLm5ldDo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1N1YmRvbWFpbiI6dHJ1ZSwiaXNUaGlyZFBhcnR5Ijp0cnVlfQ=="><meta http-equiv="origin-trial" content="A0OysezhLoCRYomumeYlubLurZTCmsjTb087OvtCy95jNM65cfEsbajrJnhaGwiTxhz38ZZbm+UhUwQuXfVPTg0AAACLeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXN5bmRpY2F0aW9uLmNvbTo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1N1YmRvbWFpbiI6dHJ1ZSwiaXNUaGlyZFBhcnR5Ijp0cnVlfQ=="><meta http-equiv="origin-trial" content="AxoOxdZQmIoA1WeAPDixRAeWDdgs7ZtVFfH2y19ziTgD1iaHE5ZGz2UdSjubkWvob9C5PrjUfkWi4ZSLgWk3Xg8AAACLeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXRhZ3NlcnZpY2VzLmNvbTo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1N1YmRvbWFpbiI6dHJ1ZSwiaXNUaGlyZFBhcnR5Ijp0cnVlfQ=="><meta http-equiv="origin-trial" content="A7+rMYR5onPnACrz+niKSeFdH3xw1IyHo2AZSHmxrofRk9w4HcQPMYcpBUKu6OQ6zsdxf4m/vqa6tG6Na4OLpAQAAAB4eyJvcmlnaW4iOiJodHRwczovL2ltYXNkay5nb29nbGVhcGlzLmNvbTo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AwfG8hAcHnPa/kJ1Co0EvG/K0F9l1s2JZGiDLt2mhC3QI5Fh4qmsmSwrWObZFbRC9ieDaSLU6lHRxhGUF/i9sgoAAACBeyJvcmlnaW4iOiJodHRwczovL2RvdWJsZWNsaWNrLm5ldDo0NDMiLCJmZWF0dXJlIjoiSW50ZXJlc3RDb2hvcnRBUEkiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AwQ7dCmHkvR6FuOFxAuNnktYSQrGbL4dF+eBkrwNLALc69Wr//PnO1yzns3pjUoCaYbKHtVcnng2hU+8OUm0PAYAAACHeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXN5bmRpY2F0aW9uLmNvbTo0NDMiLCJmZWF0dXJlIjoiSW50ZXJlc3RDb2hvcnRBUEkiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AysVDPGQTLD/Scn78x4mLwB1tMfje5jwUpAAzGRpWsr1NzoN7MTFhT3ClmImi2svDZA7V6nWGIV8YTPsSRTe0wYAAACHeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXRhZ3NlcnZpY2VzLmNvbTo0NDMiLCJmZWF0dXJlIjoiSW50ZXJlc3RDb2hvcnRBUEkiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><script src="./Python3 源码阅读 - 内存管理机制_files/pubads_impl_2021060301.js.下载" async=""></script><link rel="preload" href="./Python3 源码阅读 - 内存管理机制_files/f.txt" as="script"><script type="text/javascript" src="./Python3 源码阅读 - 内存管理机制_files/f.txt"></script><link rel="prefetch" href="https://29cf04b65aafd8ff8fd3deac3e4c8d88.safeframe.googlesyndication.com/safeframe/1-0-38/html/container.html"><link rel="shortcut icon" href="https://images.cnblogs.com/cnblogs_com/panlq/1629174/o_200119145814favicon.png" type="image/x-icon"><link rel="stylesheet" href="./Python3 源码阅读 - 内存管理机制_files/lightbox.min.css"></head>
+<body class="no-navbar"><div class="esa-mobile-menu"></div><div id="MathJax_Message" style="display: none;"></div>
+    <a name="top"></a>
+        <div id="bannerbar" class="bannerbar-mobile formobile">
+            <a href="https://www.aliyun.com/minisite/goods?userCode=swh7dvlt" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;aliyun-cps-blog-bannerbar-mobile&#39;)">
+                <img src="./Python3 源码阅读 - 内存管理机制_files/35695-20210428213541700-642740375.jpg" alt="">
+            </a>
+        </div>
+    <div id="top_nav" class="navbar forpc navbar-custom">
+        <nav id="nav_main" class="navbar-main">
+            <ul id="nav_left" class="navbar-list navbar-left">
+                <li class="navbar-branding"><a href="https://www.cnblogs.com/" title="开发者的网上家园"><img src="./Python3 源码阅读 - 内存管理机制_files/logo.svg" alt="博客园Logo"></a></li>
+                <li><a href="https://www.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-sitehome&#39;)">首页</a></li>
+                <li><a href="https://news.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-news&#39;)">新闻</a></li>
+                <li><a href="https://q.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-q&#39;)">博问</a></li>
+                <li><a id="nav_brandzone" href="https://brands.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-brands&#39;)">专区</a></li>
+                <li><a href="https://ing.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-ing&#39;)">闪存</a></li>
+                <li><a href="https://edu.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-edu&#39;)">班级</a></li>
+            </ul>
+            <ul id="nav_right" class="navbar-list navbar-right">
+                <li>
+                    <form id="zzk_search" class="navbar-search" action="https://zzk.cnblogs.com/s" method="get">
+                        <input name="w" id="zzk_search_input" placeholder="代码改变世界" type="text" tabindex="3">
+                        <button type="submit" id="zzk_search_button">
+                            <img src="./Python3 源码阅读 - 内存管理机制_files/search.svg" alt="搜索">
+                        </button>
+                    </form>
+                </li>
+                <li id="navbar_login_status" class="navbar-list">
+                    <a class="navbar-user-info navbar-blog" href="https://i.cnblogs.com/EditPosts.aspx?opt=1" alt="写随笔" title="写随笔" style="display: none;">
+                        <img id="new_post_icon" class="navbar-icon" src="./Python3 源码阅读 - 内存管理机制_files/newpost.svg" alt="写随笔">
+                    </a>
+                    <a id="navblog-myblog-icon" class="navbar-user-info navbar-blog" href="https://passport.cnblogs.com/GetBlogApplyStatus.aspx" alt="我的博客" title="我的博客" style="display: none;">
+                        <img id="myblog_icon" class="navbar-icon" src="./Python3 源码阅读 - 内存管理机制_files/myblog.svg" alt="我的博客">
+                    </a>
+                    <a class="navbar-user-info navbar-message navbar-icon-wrapper" href="https://msg.cnblogs.com/" alt="短消息" title="短消息" style="display: none;">
+                        <img id="msg_icon" class="navbar-icon" src="./Python3 源码阅读 - 内存管理机制_files/message.svg" alt="短消息">
+                        <span id="msg_count" style="display: none"></span>
+                    </a>
+                    <div id="user_info" class="navbar-user-info dropdown" style="display: none;">
+                        <a class="dropdown-button" href="https://home.cnblogs.com/">
+                            <img id="user_icon" class="navbar-avatar" src="./Python3 源码阅读 - 内存管理机制_files/avatar-default.svg" alt="用户头像">
+                        </a>
+                        <div class="dropdown-menu">
+                            <a id="navblog-myblog-text" href="https://passport.cnblogs.com/GetBlogApplyStatus.aspx">我的博客</a>
+                            <a href="https://home.cnblogs.com/">我的园子</a>
+                            <a href="https://account.cnblogs.com/settings/account">账号设置</a>
+                            <a href="javascript:void(0)" id="navbar_lite_mode_toggle" title="简洁模式会使用简洁款皮肤显示所有博客">
+    简洁模式 <img id="navbar_lite_mode_on" src="./Python3 源码阅读 - 内存管理机制_files/lite-mode-check.svg" class="hide"><span id="navbar_lite_mode_spinner" class="hide">...</span>
+</a>
+                            <a href="javascript:void(0)" onclick="account.logout();">退出登录</a>
+                        </div>
+                    </div>
+                    <a class="navbar-anonymous" href="https://account.cnblogs.com/signup/" style="display: inline;">注册</a>
+                    <a class="navbar-anonymous" href="javascript:void(0);" onclick="account.login()" style="display: inline;">登录</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <div id="page_begin_html">
+        
+
+
+    </div>
+    <!--done-->
+<div id="home">
+<div id="header">
+	<div id="blogTitle">
+        <a id="lnkBlogLogo" href="https://www.cnblogs.com/panlq/"><img id="blogLogo" src="./Python3 源码阅读 - 内存管理机制_files/logo.gif" alt="返回主页"></a>		
+		
+<!--done-->
+<h1><a id="Header1_HeaderTitle" class="headermaintitle HeaderMainTitle" href="https://www.cnblogs.com/panlq/">JonPan</a>
+</h1>
+<h2></h2>
+
+
+
+
+		
+	</div><!--end: blogTitle 博客的标题和副标题 -->
+	<div id="navigator">
+		
+<ul id="navList">
+<li><a id="blog_nav_sitehome" class="menu" href="https://www.cnblogs.com/">
+博客园</a>
+<i></i></li>
+<li>
+<a id="blog_nav_myhome" class="menu" href="https://www.cnblogs.com/panlq/">
+首页</a>
+<i></i></li><li><a class="menu" href="https://www.cnblogs.com/panlq/tag/">标签</a><i></i></li><li><a class="menu" href="https://www.cnblogs.com/panlq/p/">归档</a><i></i></li><li><a class="menu" href="https://www.cnblogs.com/panlq/category/1486847.html">每日一题</a><i></i></li>
+                            <li class="esa-has-subnavs">
+                                <a class="menu" href="javascript:void(0);">导航
+                                    <svg class="arrow" width="12px" height="8px" viewBox="0 0 14 8" xml:space="preserve" fill="none" stroke="rgb(49, 70, 89)"><path d="M1,1l6.2,6L13,1"></path></svg>
+                                </a>
+                                <ul class="esa-sub-navs"><li><a class="menu" href="http://hwyx.91sq.cc/" target="_blank">好物优选</a></li></ul>
+                            <i></i></li>
+<li>
+
+
+<i></i></li>
+<li>
+<i></i></li>
+<li>
+
+<!--<partial name="./Shared/_XmlLink.cshtml" model="Model" /></li>--><i></i></li>
+<li>
+<a id="blog_nav_admin" class="menu" href="https://i.cnblogs.com/">
+管理</a>
+<i></i></li>
+</ul>
+
+
+		<div class="blogStats">
+			<span id="stats_post_count">随笔 - 33&nbsp; </span>
+<span id="stats_article_count">文章 - 20&nbsp; </span>
+<span id="stats-comment_count">评论 - 20&nbsp; </span>
+<span id="stats-total-view-count">阅读 - 
+<span title="总阅读数: 178564">
+17万</span></span>
+
+		</div><!--end: blogStats -->
+	
+                <svg t="1573264861612" class="icon esa-search-btn" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="7386" width="32" height="32" data-spm-anchor-id="a313x.7781069.0.i8">
+                    <path fill="rgb(49, 70, 89)" d="M616.362667 580.608h-23.808l-8.533334-8.128a196.16 196.16 0 1 0-21.098666 21.098667l8.128 8.533333v23.808l150.805333 150.165333 44.8-44.8z m-180.8 0a135.594667 135.594667 0 1 1 135.594666-135.594667 135.402667 135.402667 0 0 1-135.573333 135.594667z" p-id="7387"></path>
+                </svg>
+                <svg t="1573265135257" class="icon esa-search-close" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15367" width="32" height="32">
+                    <path fill="rgb(49, 70, 89)" d="M515.23600182 491.06853843L378.27564815 354.10818478a17.09155825 17.09155825 0 1 0-24.17885764 24.15606913l136.96035332 136.97174792-136.96035331 136.97174789a17.09155825 17.09155825 0 1 0 24.16746339 24.16746337l136.97174791-136.96035366 136.9717479 136.96035366a17.09155825 17.09155825 0 1 0 24.16746337-24.15606912l-136.96035366-136.98314215 136.96035366-136.96035367a17.09155825 17.09155825 0 1 0-24.16746337-24.16746337l-136.96035366 136.96035364z" p-id="15368"></path>
+                </svg></div><!--end: navigator 博客导航栏 -->
+
+                <div class="esa-search-box">
+                    <div class="div_my_zzk">
+                        <input type="text" id="q" onkeydown="return zzk_go_enter(event);" class="input_my_zzk" placeholder="Type to Search">&nbsp;<input onclick="zzk_go()" type="button" value="搜 索" id="btnZzk" class="btn_my_zzk">
+                    </div>
+                </div></div><!--end: header 头部 -->
+<div id="main">
+	<div id="mainContent">
+	<div class="forFlow">
+		<div id="post_detail">
+    <!--done-->
+    <div id="topics">
+        <div class="post">
+            <h1 class="postTitle">
+                
+<a id="cb_post_title_url" class="postTitle2 vertical-middle" href="https://www.cnblogs.com/panlq/p/13056907.html">
+    <span>Python3 源码阅读 - 内存管理机制</span>
+    
+
+
+
+</a>
+
+            </h1>
+            <div class="clear"></div>
+            <div class="postBody">
+                    <div id="cnblogs_post_description" style="display: none">
+        python 内存管理机制，pymalloc， 对象池
+    </div>
+<div id="cnblogs_post_body" class="blogpost-body cnblogs-markdown">
+<h2 id="3160438349">Python 内存管理分层架构<a href="https://www.cnblogs.com/panlq/p/13056907.html#3160438349" class="esa-anchor" style="opacity: 0;">#</a></h2>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_0">Copy</div><code class="language-c++ hljs" id="copy_target_0"><span class="hljs-comment">/* An object allocator for Python.
+
+   Here is an introduction to the layers of the Python memory architecture,
+   showing where the object allocator is actually used (layer +2), It is
+   called for every object allocation and deallocation (PyObject_New/Del),
+   unless the object-specific allocators implement a proprietary allocation
+   scheme (ex.: ints use a simple free list). This is also the place where
+   the cyclic garbage collector operates selectively on container objects.
+
+
+    Object-specific allocators
+    _____   ______   ______       ________
+   [ int ] [ dict ] [ list ] ... [ string ]       Python core         |
++3 | &lt;----- Object-specific memory -----&gt; | &lt;-- Non-object memory --&gt; |
+    _______________________________       |                           |
+   [   Python's object allocator   ]      |                           |
++2 | ####### Object memory ####### | &lt;------ Internal buffers ------&gt; |
+    ______________________________________________________________    |
+   [          Python's raw memory allocator (PyMem_ API)          ]   |
++1 | &lt;----- Python memory (under PyMem manager's control) ------&gt; |   |
+    __________________________________________________________________
+   [    Underlying general-purpose allocator (ex: C library malloc)   ]
+ 0 | &lt;------ Virtual memory allocated for the python process -------&gt; |
+
+   =========================================================================
+    _______________________________________________________________________
+   [                OS-specific Virtual Memory Manager (VMM)               ]
+-1 | &lt;--- Kernel dynamic storage allocation &amp; management (page-based) ---&gt; |
+    __________________________________   __________________________________
+   [                                  ] [                                  ]
+-2 | &lt;-- Physical memory: ROM/RAM --&gt; | | &lt;-- Secondary storage (swap) --&gt; |
+
+*/</span>
+</code></pre>
+<p>reference：<a href="https://github.com/python/cpython/blob/3.8/Objects/obmalloc.c" target="_blank">Objects/obmalloc.c</a></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_1">Copy</div><code class="hljs php" id="copy_target_1">layer <span class="hljs-number">3</span>: <span class="hljs-keyword">Object</span>-specific memory(<span class="hljs-keyword">int</span>/dict/<span class="hljs-keyword">list</span>/<span class="hljs-keyword">string</span>....)
+		python 实现并维护
+		用户对Python对象的直接操作，主要是各类特定对象的缓冲池机制，缓冲池，比如小整数对象池等等
+layer <span class="hljs-number">2</span>: Python<span class="hljs-string">'s object allocator
+		实现了创建/销毁python对象的接口(PyObject_New/Del),涉及对象参数/引用计数等
+
+layer 1: Python'</span>s raw memory allocator (PyMem_ API)
+		包装了第<span class="hljs-number">0</span>层的内存管理接口，提供同一个raw memory管理接口
+		封装的原因：不同操作系统C行为不一致，保证可移植性，相同语义相同行为
+		
+layer <span class="hljs-number">0</span>: Underlying general-purpose allocator (ex: C library malloc)
+		操作系统提供的内存管理接口，由操作系统实现并管理，Python不能干涉这一层的行为,大内存 分配调用malloc函数分配内存
+</code></pre>
+<h2 id="1937521703">Python 内存分配策略之-block,pool<a href="https://www.cnblogs.com/panlq/p/13056907.html#1937521703" class="esa-anchor">#</a></h2>
+<p>Python中有分为大内存和小内存，512K为分界线</p>
+<ul>
+<li>
+<p>大内存使用系统malloc进行分配</p>
+</li>
+<li>
+<p>小内存使用python内存池进行分配</p>
+</li>
+</ul>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_2">Copy</div><code class="hljs yaml" id="copy_target_2"><span class="hljs-number">1</span><span class="hljs-string">.</span> <span class="hljs-string">如果要分配的内存空间大于</span> <span class="hljs-string">SMALL_REQUEST_THRESHOLD</span> <span class="hljs-string">bytes(512</span> <span class="hljs-string">bytes),</span> <span class="hljs-string">将直接使用layer</span> <span class="hljs-number">1</span><span class="hljs-string">的内存分配接口进行分配</span>
+<span class="hljs-number">2</span><span class="hljs-string">.</span> <span class="hljs-string">否则,</span> <span class="hljs-string">使用不同的block来满足分配需求</span>
+</code></pre>
+<blockquote>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_3">Copy</div><code class="hljs coffeescript" id="copy_target_3">申请一块大小<span class="hljs-number">28</span>字节的内存, 实际从内存中划到<span class="hljs-number">32</span>字节的一个block (从size <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">index</span>为3的<span class="hljs-title">pool</span>里面划出)</span>
+</code></pre>
+</blockquote>
+<h3 id="3172803510">block<a href="https://www.cnblogs.com/panlq/p/13056907.html#3172803510" class="esa-anchor">#</a></h3>
+<p>内存块block 是python内存的最小单位</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_4">Copy</div><code class="language-c++ hljs" id="copy_target_4">* For small requests we have the following table:
+ *
+ * Request in bytes     Size of allocated block      Size <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">idx</span>
+ * ----------------------------------------------------------------
+ *        1-8                     8                       0
+ *        9-16                   16                       1
+ *       17-24                   24                       2
+ *       25-32                   32                       3
+ *       33-40                   40                       4
+ *       41-48                   48                       5
+ *       49-56                   56                       6
+ *       57-64                   64                       7
+ *       65-72                   72                       8
+ *        ...                   ...                     ...
+ *      497-504                 504                      62
+ *      505-512                 512                      63
+ *
+ *      0, <span class="hljs-title">SMALL_REQUEST_THRESHOLD</span> + 1 <span class="hljs-title">and</span> <span class="hljs-title">up</span>:</span> routed to the underlying
+ *      allocator.
+ */
+</code></pre>
+<h3 id="1239231800">pool<a href="https://www.cnblogs.com/panlq/p/13056907.html#1239231800" class="esa-anchor">#</a></h3>
+<p>pool内存池，管理block, <strong>一个pool管理着一堆固定大小的内存块</strong>，在Python中, 一个pool的大小通常为一个<strong>系统内存页. 4kB</strong></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_5">Copy</div><code class="language-c++ hljs" id="copy_target_5"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> SYSTEM_PAGE_SIZE        (4 * 1024)</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> SYSTEM_PAGE_SIZE_MASK   (SYSTEM_PAGE_SIZE - 1)</span>
+
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> POOL_SIZE               SYSTEM_PAGE_SIZE        <span class="hljs-comment">/* must be 2^N */</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> POOL_SIZE_MASK          SYSTEM_PAGE_SIZE_MASK</span>
+</code></pre>
+<p><em>pool的4kB内存 = pool_header + block集合(N多大小一样的block)</em></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_6">Copy</div><code class="language-c++ hljs" id="copy_target_6"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint8_t</span> block;
+
+<span class="hljs-comment">/* Pool for small blocks. */</span>
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pool_header</span> {</span>
+    <span class="hljs-class"><span class="hljs-keyword">union</span> {</span> block *_padding;
+            uint count; } ref;          <span class="hljs-comment">/* number of allocated blocks    */</span>
+    block *freeblock;                   <span class="hljs-comment">/* pool's free list head         */</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pool_header</span> *<span class="hljs-title">nextpool</span>;</span>       <span class="hljs-comment">/* next pool of this size class  */</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pool_header</span> *<span class="hljs-title">prevpool</span>;</span>       <span class="hljs-comment">/* previous pool       ""        */</span>
+    uint arenaindex;                    <span class="hljs-comment">/* index into arenas of base adr */</span>
+    uint szidx;                         <span class="hljs-comment">/* block size class index        */</span>
+    uint nextoffset;                    <span class="hljs-comment">/* bytes to virgin block         */</span>
+    uint maxnextoffset;                 <span class="hljs-comment">/* largest valid nextoffset      */</span>
+};
+</code></pre>
+<p>pool_header 作用</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_7">Copy</div><code class="hljs mipsasm" id="copy_target_7">与其他pool链接, 组成双向链表
+<span class="hljs-number">2</span>. 维护pool中可用的<span class="hljs-keyword">block, </span>单链表
+<span class="hljs-number">3</span>. 保存 szidx , 这个和该pool中<span class="hljs-keyword">block的大小有关系, </span>(<span class="hljs-keyword">block </span>size=<span class="hljs-number">8</span>, szidx=<span class="hljs-number">0</span>), (<span class="hljs-keyword">block </span>size=<span class="hljs-number">16</span>, szidx=<span class="hljs-number">1</span>)...用于内存分配时匹配到拥有对应大小<span class="hljs-keyword">block的pool
+</span></code></pre>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/CJ9MnOGEm5THDBK.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/CJ9MnOGEm5THDBK.png" alt="image.png" loading="lazy" class="medium-zoom-image"></a></p>
+<h3 id="1083992624">pool 初始化<a href="https://www.cnblogs.com/panlq/p/13056907.html#1083992624" class="esa-anchor">#</a></h3>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_8">Copy</div><code class="language-c++ hljs" id="copy_target_8"><span class="hljs-function"><span class="hljs-keyword">void</span> *
+<span class="hljs-title">PyObject_Malloc</span><span class="hljs-params">(<span class="hljs-keyword">size_t</span> nbytes)</span>
+</span>{
+  ...
+
+          init_pool:
+            <span class="hljs-comment">// 1. 连接到 used_pools 双向链表, 作为表头</span>
+            <span class="hljs-comment">// 注意, 这里 usedpools[0] 保存着 block size = 8 的所有used_pools的表头</span>
+            <span class="hljs-comment">/* Frontlink to used pools. */</span>
+            next = usedpools[size + size]; <span class="hljs-comment">/* == prev */</span>
+            pool-&gt;nextpool = next;
+            pool-&gt;prevpool = next;
+            next-&gt;nextpool = pool;
+            next-&gt;prevpool = pool;
+            pool-&gt;ref.count = <span class="hljs-number">1</span>;
+
+            <span class="hljs-comment">// 如果已经初始化过了...这里看初始化, 跳过</span>
+            <span class="hljs-keyword">if</span> (pool-&gt;szidx == size) {
+                <span class="hljs-comment">/* Luckily, this pool last contained blocks
+                 * of the same size class, so its header
+                 * and free list are already initialized.
+                 */</span>
+                bp = pool-&gt;freeblock;
+                pool-&gt;freeblock = *(block **)bp;
+                UNLOCK();
+                <span class="hljs-keyword">return</span> (<span class="hljs-keyword">void</span> *)bp;
+            }
+
+
+            <span class="hljs-comment">/*
+             * Initialize the pool header, set up the free list to
+             * contain just the second block, and return the first
+             * block.
+             */</span>
+            <span class="hljs-comment">// 开始初始化pool_header</span>
+            <span class="hljs-comment">// 这里 size = (uint)(nbytes - 1) &gt;&gt; ALIGNMENT_SHIFT;  其实是Size class idx, 即szidx</span>
+            pool-&gt;szidx = size;
+
+            <span class="hljs-comment">// 计算获得每个block的size</span>
+            size = INDEX2SIZE(size);
+
+            <span class="hljs-comment">// 注意 #define POOL_OVERHEAD           ROUNDUP(sizeof(struct pool_header))</span>
+            <span class="hljs-comment">// bp =&gt; 初始化为pool + pool_header size,  跳过pool_header的内存</span>
+            bp = (block *)pool + POOL_OVERHEAD;
+
+            <span class="hljs-comment">// 计算偏移量, 这里的偏移量是绝对值</span>
+            <span class="hljs-comment">// #define POOL_SIZE               SYSTEM_PAGE_SIZE        /* must be 2^N */</span>
+            <span class="hljs-comment">// POOL_SIZE = 4kb, POOL_OVERHEAD = pool_header size</span>
+            <span class="hljs-comment">// 下一个偏移位置: pool_header size + 2 * size</span>
+            pool-&gt;nextoffset = POOL_OVERHEAD + (size &lt;&lt; <span class="hljs-number">1</span>);
+            <span class="hljs-comment">// 4kb - size</span>
+            pool-&gt;maxnextoffset = POOL_SIZE - size;
+
+            <span class="hljs-comment">// freeblock指向 bp + size = pool_header size + size</span>
+            pool-&gt;freeblock = bp + size;
+
+            <span class="hljs-comment">// 赋值NULL</span>
+            *(block **)(pool-&gt;freeblock) = <span class="hljs-literal">NULL</span>;
+            UNLOCK();
+            <span class="hljs-keyword">return</span> (<span class="hljs-keyword">void</span> *)bp;
+        }
+</code></pre>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/778496-20200709235605560-1980058094.png" data-title="" data-alt="" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/778496-20200709235605560-1980058094.png" alt="" loading="lazy" class="medium-zoom-image"></a></p>
+<h3 id="3943500122">pool 进行block分配 - 总体代码<a href="https://www.cnblogs.com/panlq/p/13056907.html#3943500122" class="esa-anchor">#</a></h3>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_9">Copy</div><code class="language-c++ hljs" id="copy_target_9">  <span class="hljs-keyword">if</span> (pool != pool-&gt;nextpool) {   <span class="hljs-comment">//</span>
+            <span class="hljs-comment">/*
+             * There is a used pool for this size class.
+             * Pick up the head block of its free list.
+             */</span>
+            ++pool-&gt;ref.count;
+            bp = pool-&gt;freeblock; <span class="hljs-comment">// 指针指向空闲block起始位置</span>
+            assert(bp != <span class="hljs-literal">NULL</span>);
+
+            <span class="hljs-comment">// 代码-1</span>
+            <span class="hljs-comment">// 调整 pool-&gt;freeblock (假设A节点)指向链表下一个, 即bp首字节指向的下一个节点(假设B节点) , 如果此时!= NULL</span>
+            <span class="hljs-comment">// 表示 A节点可用, 直接返回</span>
+            <span class="hljs-keyword">if</span> ((pool-&gt;freeblock = *(block **)bp) != <span class="hljs-literal">NULL</span>) {
+                UNLOCK();
+                <span class="hljs-keyword">return</span> (<span class="hljs-keyword">void</span> *)bp;
+            }
+
+            <span class="hljs-comment">// 代码-2</span>
+            <span class="hljs-comment">/*
+             * Reached the end of the free list, try to extend it.
+             */</span>
+            <span class="hljs-comment">// 有足够的空间, 分配一个, pool-&gt;freeblock 指向后移</span>
+            <span class="hljs-keyword">if</span> (pool-&gt;nextoffset &lt;= pool-&gt;maxnextoffset) {
+                <span class="hljs-comment">/* There is room for another block. */</span>
+                <span class="hljs-comment">// 变更位置信息</span>
+                pool-&gt;freeblock = (block*)pool +
+                                  pool-&gt;nextoffset;
+                pool-&gt;nextoffset += INDEX2SIZE(size);
+
+
+                *(block **)(pool-&gt;freeblock) = <span class="hljs-literal">NULL</span>; <span class="hljs-comment">// 注意, 指向NULL</span>
+                UNLOCK();
+
+                <span class="hljs-comment">// 返回bp</span>
+                <span class="hljs-keyword">return</span> (<span class="hljs-keyword">void</span> *)bp;
+            }
+
+            <span class="hljs-comment">// 代码-3</span>
+            <span class="hljs-comment">/* Pool is full, unlink from used pools. */</span>  <span class="hljs-comment">// 满了, 需要从下一个pool获取</span>
+            next = pool-&gt;nextpool;
+            pool = pool-&gt;prevpool;
+            next-&gt;prevpool = pool;
+            pool-&gt;nextpool = next;
+            UNLOCK();
+            <span class="hljs-keyword">return</span> (<span class="hljs-keyword">void</span> *)bp;
+        }
+</code></pre>
+<h3 id="2037329045">pool进行block分配 -1<a href="https://www.cnblogs.com/panlq/p/13056907.html#2037329045" class="esa-anchor">#</a></h3>
+<p>内存块尚未分配完, 且此时不存在回收的block, 全新进来的时候, 分配第一块block</p>
+<blockquote>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_10">Copy</div><code class="language-c hljs" id="copy_target_10">(pool-&gt;freeblock = *(block **)bp) == <span class="hljs-literal">NULL</span>
+</code></pre>
+</blockquote>
+<p>当进入<strong>代码逻辑2</strong>时，表示有空闲的block, 代码2的执行流程图如下</p>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/JR3pP9cGQEveXbn.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/JR3pP9cGQEveXbn.png" alt="image.png" loading="lazy" class="medium-zoom-image"></a></p>
+<h3 id="611700810">pool进行block分配 - 2 回收了某几个block<a href="https://www.cnblogs.com/panlq/p/13056907.html#611700810" class="esa-anchor">#</a></h3>
+<p>回收涉及的代码：</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_11">Copy</div><code class="language-c++ hljs" id="copy_target_11"><span class="hljs-function"><span class="hljs-keyword">void</span>
+<span class="hljs-title">PyObject_Free</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *p)</span>
+</span>{
+    poolp pool;
+    block *lastfree;
+    poolp next, prev;
+    uint size;
+
+    pool = POOL_ADDR(p);
+    <span class="hljs-keyword">if</span> (Py_ADDRESS_IN_RANGE(p, pool)) {
+        <span class="hljs-comment">/* We allocated this address. */</span>
+        LOCK();
+        <span class="hljs-comment">/* Link p to the start of the pool's freeblock list.  Since
+         * the pool had at least the p block outstanding, the pool
+         * wasn't empty (so it's already in a usedpools[] list, or
+         * was full and is in no list -- it's not in the freeblocks
+         * list in any case).
+         */</span>
+        assert(pool-&gt;ref.count &gt; <span class="hljs-number">0</span>);            <span class="hljs-comment">/* else it was empty */</span>
+        <span class="hljs-comment">// p被释放, p的第一个字节值被设置为当前freeblock的值</span>
+        *(block **)p = lastfree = pool-&gt;freeblock;
+        <span class="hljs-comment">// freeblock被更新为指向p的首地址</span>
+        pool-&gt;freeblock = (block *)p;
+
+        <span class="hljs-comment">// 相当于往list中头插入了一个节点</span>
+
+     ...
+    }
+}
+</code></pre>
+<p>每释放一个block，该blcok就会变成<code>pool-&gt;freeblock</code>的头结点， 假设已经连续分配了5块, 第1块和第4块被释放，此时的内存图示如下：</p>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/778496-20200709235755308-2109043929.png" data-title="" data-alt="" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/778496-20200709235755308-2109043929.png" alt="" loading="lazy"></a></p>
+<p><em>此时再一个block分配调用进来, 执行分配, 进入的逻辑是<code>代码-1</code></em></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_12">Copy</div><code class="language-c++ hljs" id="copy_target_12">bp = pool-&gt;freeblock; <span class="hljs-comment">// 指针指向空闲block起始位置</span>
+<span class="hljs-comment">// 代码-1</span>
+<span class="hljs-comment">// 调整 pool-&gt;freeblock (假设A节点)指向链表下一个, 即bp首字节指向的下一个节点(假设B节点) , 如果此时!= NULL</span>
+<span class="hljs-comment">// 表示 A节点可用, 直接返回</span>
+<span class="hljs-keyword">if</span> ((pool-&gt;freeblock = *(block **)bp) != <span class="hljs-literal">NULL</span>) {
+    UNLOCK();
+    <span class="hljs-keyword">return</span> (<span class="hljs-keyword">void</span> *)bp;
+}
+</code></pre>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/QdxnhDNbgwe7SGv.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/QdxnhDNbgwe7SGv.png" alt="image.png" loading="lazy" class="medium-zoom-image"></a></p>
+<h3 id="3899646029">pool进行block分配 - 3 pool用完了<a href="https://www.cnblogs.com/panlq/p/13056907.html#3899646029" class="esa-anchor">#</a></h3>
+<p>pool中内存空间都用完了, 进入<code>代码-3</code></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_13">Copy</div><code class="language-c++ hljs" id="copy_target_13"><span class="hljs-comment">/* Pool is full, unlink from used pools. */</span>  <span class="hljs-comment">// 满了, 需要从下一个pool获取</span>
+next = pool-&gt;nextpool;
+pool = pool-&gt;prevpool;
+next-&gt;prevpool = pool;
+pool-&gt;nextpool = next;
+UNLOCK();
+<span class="hljs-keyword">return</span> (<span class="hljs-keyword">void</span> *)bp;
+</code></pre>
+<h2 id="379391380">Python 内存分配策略之-arena<a href="https://www.cnblogs.com/panlq/p/13056907.html#379391380" class="esa-anchor">#</a></h2>
+<p>arena: 多个pool聚合的结果, 可放置64个pool</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_14">Copy</div><code class="language-c++ hljs" id="copy_target_14"><span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> ARENA_SIZE              (256 &lt;&lt; 10)     <span class="hljs-comment">/* 256KB */</span></span>
+</code></pre>
+<h3 id="2601202455">arena结构<a href="https://www.cnblogs.com/panlq/p/13056907.html#2601202455" class="esa-anchor">#</a></h3>
+<p><em>一个完整的arena = arena_object + pool集合</em></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_15">Copy</div><code class="language-c++ hljs" id="copy_target_15"><span class="hljs-comment">/* Record keeping for arenas. */</span>
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">arena_object</span> {</span>
+    <span class="hljs-comment">/* The address of the arena, as returned by malloc.  Note that 0
+     * will never be returned by a successful malloc, and is used
+     * here to mark an arena_object that doesn't correspond to an
+     * allocated arena.
+     */</span>
+    <span class="hljs-keyword">uintptr_t</span> address;
+
+    <span class="hljs-comment">/* Pool-aligned pointer to the next pool to be carved off. */</span>
+    block* pool_address;
+
+    <span class="hljs-comment">/* The number of available pools in the arena:  free pools + never-
+     * allocated pools.
+     */</span>
+    uint nfreepools;
+
+    <span class="hljs-comment">/* The total number of pools in the arena, whether or not available. */</span>
+    uint ntotalpools;
+
+    <span class="hljs-comment">/* Singly-linked list of available pools. */</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pool_header</span>* <span class="hljs-title">freepools</span>;</span>
+
+    <span class="hljs-comment">/* Whenever this arena_object is not associated with an allocated
+     * arena, the nextarena member is used to link all unassociated
+     * arena_objects in the singly-linked `unused_arena_objects` list.
+     * The prevarena member is unused in this case.
+     *
+     * When this arena_object is associated with an allocated arena
+     * with at least one available pool, both members are used in the
+     * doubly-linked `usable_arenas` list, which is maintained in
+     * increasing order of `nfreepools` values.
+     *
+     * Else this arena_object is associated with an allocated arena
+     * all of whose pools are in use.  `nextarena` and `prevarena`
+     * are both meaningless in this case.
+     */</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">arena_object</span>* <span class="hljs-title">nextarena</span>;</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">arena_object</span>* <span class="hljs-title">prevarena</span>;</span>
+};
+</code></pre>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_16">Copy</div><code class="hljs yaml" id="copy_target_16"><span class="hljs-string">arena_object的作用</span>
+<span class="hljs-number">1</span><span class="hljs-string">.</span> <span class="hljs-string">与其他arena连接,</span> <span class="hljs-string">组成双向链表</span>
+<span class="hljs-number">2</span><span class="hljs-string">.</span> <span class="hljs-string">维护arena中可用的pool,</span> <span class="hljs-string">单链表</span>
+</code></pre>
+<ul>
+<li><strong>pool_header和管理的blocks内存是一块连续的内存</strong> =&gt; pool_header被申请时，其管理的的block集合的内存一并被申请 <code>uint maxnextoffset;         /* largest valid nextoffset   */</code></li>
+<li><strong>arena_object 和其管理的内存是分离的</strong> =&gt; arena_object被申请时，其管理的pool集合的内存没有被申请，而是在某一时刻建立关系的</li>
+</ul>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/778496-20200709235935827-271800889.png" data-title="" data-alt="" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/778496-20200709235935827-271800889.png" alt="" loading="lazy"></a></p>
+<h3 id="3686230403">arena的两种状态<a href="https://www.cnblogs.com/panlq/p/13056907.html#3686230403" class="esa-anchor">#</a></h3>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_17">Copy</div><code class="language-c hljs" id="copy_target_17"><span class="hljs-comment">/* The head of the singly-linked, NULL-terminated list of available
+ * arena_objects.
+ */</span>
+<span class="hljs-comment">// 单链表</span>
+<span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">arena_object</span>* <span class="hljs-title">unused_arena_objects</span> =</span> <span class="hljs-literal">NULL</span>;
+
+<span class="hljs-comment">/* The head of the doubly-linked, NULL-terminated at each end, list of
+ * arena_objects associated with arenas that have pools available.
+ */</span>
+<span class="hljs-comment">// 双向链表</span>
+<span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">arena_object</span>* <span class="hljs-title">usable_arenas</span> =</span> <span class="hljs-literal">NULL</span>;
+</code></pre>
+<h3 id="4134553440">arena 初始化<a href="https://www.cnblogs.com/panlq/p/13056907.html#4134553440" class="esa-anchor">#</a></h3>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_18">Copy</div><code class="language-c hljs" id="copy_target_18">* Allocate a <span class="hljs-keyword">new</span> arena.  If we run out of memory, <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>.  Else
+ * allocate a <span class="hljs-keyword">new</span> arena, <span class="hljs-keyword">and</span> <span class="hljs-keyword">return</span> the address of an arena_object
+ * describing the <span class="hljs-keyword">new</span> arena.  It<span class="hljs-number">'</span>s expected that the caller will <span class="hljs-built_in">set</span>
+ * `usable_arenas` to the <span class="hljs-keyword">return</span> value.
+ */
+<span class="hljs-keyword">static</span> struct arena_object*
+new_arena(<span class="hljs-keyword">void</span>)
+{
+    struct arena_object* arenaobj;
+    uint excess;        <span class="hljs-comment">/* number of bytes above pool alignment */</span>
+    <span class="hljs-keyword">void</span> *address;
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> debug_stats = <span class="hljs-number">-1</span>;
+
+    <span class="hljs-keyword">if</span> (debug_stats == <span class="hljs-number">-1</span>) {
+        <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *opt = Py_GETENV(<span class="hljs-string">"PYTHONMALLOCSTATS"</span>);
+        debug_stats = (opt != <span class="hljs-literal">NULL</span> &amp;&amp; *opt != <span class="hljs-string">'\0'</span>);
+    }
+    <span class="hljs-keyword">if</span> (debug_stats)
+        _PyObject_DebugMallocStats(<span class="hljs-built_in">stderr</span>);
+
+    <span class="hljs-comment">// 判断是否需要扩充"未使用"的arena_object列表</span>
+    <span class="hljs-keyword">if</span> (unused_arena_objects == <span class="hljs-literal">NULL</span>) {
+        uint i;
+        uint numarenas;
+        <span class="hljs-keyword">size_t</span> nbytes;
+
+        <span class="hljs-comment">/* Double the number of arena objects on each allocation.
+         * Note that it's possible for `numarenas` to overflow.
+         */</span>
+        <span class="hljs-comment">// 确定需要申请的个数, 首次初始化, 16, 之后每次翻倍</span>
+        numarenas = maxarenas ? maxarenas &lt;&lt; <span class="hljs-number">1</span> : INITIAL_ARENA_OBJECTS;
+        <span class="hljs-keyword">if</span> (numarenas &lt;= maxarenas)
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;                <span class="hljs-comment">/* overflow */</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> SIZEOF_SIZE_T &lt;= SIZEOF_INT</span>
+        <span class="hljs-keyword">if</span> (numarenas &gt; SIZE_MAX / <span class="hljs-keyword">sizeof</span>(*arenas))
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;                <span class="hljs-comment">/* overflow */</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+        nbytes = numarenas * <span class="hljs-keyword">sizeof</span>(*arenas);
+        <span class="hljs-comment">// 申请内存</span>
+        arenaobj = (struct arena_object *)PyMem_RawRealloc(arenas, nbytes);
+        <span class="hljs-keyword">if</span> (arenaobj == <span class="hljs-literal">NULL</span>)
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;
+        arenas = arenaobj;
+
+        <span class="hljs-comment">/* We might need to fix pointers that were copied.  However,
+         * new_arena only gets called when all the pages in the
+         * previous arenas are full.  Thus, there are *no* pointers
+         * into the old array. Thus, we don't have to worry about
+         * invalid pointers.  Just to be sure, some asserts:
+         */</span>
+        assert(usable_arenas == <span class="hljs-literal">NULL</span>);
+        assert(unused_arena_objects == <span class="hljs-literal">NULL</span>);
+
+        <span class="hljs-comment">/* Put the new arenas on the unused_arena_objects list. */</span>
+        <span class="hljs-keyword">for</span> (i = maxarenas; i &lt; numarenas; ++i) {
+            arenas[i].address = <span class="hljs-number">0</span>;              <span class="hljs-comment">/* mark as unassociated */</span>
+            <span class="hljs-comment">// 新申请的一律为0, 标识着这个arena处于"未使用"</span>
+            arenas[i].nextarena = i &lt; numarenas - <span class="hljs-number">1</span> ?
+                                   &amp;arenas[i+<span class="hljs-number">1</span>] : <span class="hljs-literal">NULL</span>;
+        }
+
+         <span class="hljs-comment">// 将其放入unused_arena_objects链表中</span>
+        <span class="hljs-comment">// unused_arena_objects 为新分配内存空间的开头</span>
+        <span class="hljs-comment">/* Update globals. */</span>
+        unused_arena_objects = &amp;arenas[maxarenas];
+        maxarenas = numarenas;
+    }
+
+    <span class="hljs-comment">/* Take the next available arena object off the head of the list. */</span>
+    assert(unused_arena_objects != <span class="hljs-literal">NULL</span>);
+    <span class="hljs-comment">// 从unused_arena_objects中, 获取一个未使用的object</span>
+    arenaobj = unused_arena_objects;
+    unused_arena_objects = arenaobj-&gt;nextarena;  <span class="hljs-comment">// 更新链表</span>
+    assert(arenaobj-&gt;address == <span class="hljs-number">0</span>);
+    <span class="hljs-comment">// 申请内存, 256KB, 内存地址赋值给arena的address. 这块内存可用</span>
+    address = _PyObject_Arena.alloc(_PyObject_Arena.ctx, ARENA_SIZE);
+    <span class="hljs-keyword">if</span> (address == <span class="hljs-literal">NULL</span>) {
+        <span class="hljs-comment">/* The allocation failed: return NULL after putting the
+         * arenaobj back.
+         */</span>
+        arenaobj-&gt;nextarena = unused_arena_objects;
+        unused_arena_objects = arenaobj;
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;
+    }
+    arenaobj-&gt;address = (<span class="hljs-keyword">uintptr_t</span>)address;
+
+    ++narenas_currently_allocated;
+    ++ntimes_arena_allocated;
+    <span class="hljs-keyword">if</span> (narenas_currently_allocated &gt; narenas_highwater)
+        narenas_highwater = narenas_currently_allocated;
+    arenaobj-&gt;freepools = <span class="hljs-literal">NULL</span>;
+    <span class="hljs-comment">/* pool_address &lt;- first pool-aligned address in the arena
+       nfreepools &lt;- number of whole pools that fit after alignment */</span>
+    arenaobj-&gt;pool_address = (block*)arenaobj-&gt;address;
+    arenaobj-&gt;nfreepools = MAX_POOLS_IN_ARENA;
+    <span class="hljs-comment">// 将pool的起始地址调整为系统页的边界</span>
+    <span class="hljs-comment">// 申请到 256KB, 放弃了一些内存, 而将可使用的内存边界pool_address调整到了与系统页对齐</span>
+    excess = (uint)(arenaobj-&gt;address &amp; POOL_SIZE_MASK);
+    <span class="hljs-keyword">if</span> (excess != <span class="hljs-number">0</span>) {
+        --arenaobj-&gt;nfreepools;
+        arenaobj-&gt;pool_address += POOL_SIZE - excess;
+    }
+    arenaobj-&gt;ntotalpools = arenaobj-&gt;nfreepools;
+
+    <span class="hljs-keyword">return</span> arenaobj;
+}
+</code></pre>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/KT5iJs4MXRqfYWZ.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/KT5iJs4MXRqfYWZ.png" alt="image.png" loading="lazy" class="medium-zoom-image"></a></p>
+<p>从arenas取一个arena进行初始化</p>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/dMJzhvcGpHXt978.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/dMJzhvcGpHXt978.png" alt="image.png" loading="lazy" class="medium-zoom-image"></a></p>
+<h3 id="143591070">arena分配<a href="https://www.cnblogs.com/panlq/p/13056907.html#143591070" class="esa-anchor">#</a></h3>
+<p>new一个全新的arena</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_19">Copy</div><code class="language-c hljs" id="copy_target_19"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span>*
+<span class="hljs-title">pymalloc_alloc</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *ctx, <span class="hljs-keyword">size_t</span> nbytes)</span>
+ </span>{
+            <span class="hljs-comment">// 刚开始没有可用的arena</span>
+            <span class="hljs-keyword">if</span> (usable_arenas == <span class="hljs-literal">NULL</span>) {
+              <span class="hljs-comment">// new一个, 作为双向链表的表头</span>
+              usable_arenas = new_arena();
+              <span class="hljs-keyword">if</span> (usable_arenas == <span class="hljs-literal">NULL</span>) {
+                  UNLOCK();
+                  <span class="hljs-keyword">goto</span> redirect;
+              }
+
+              usable_arenas-&gt;nextarena =
+                  usable_arenas-&gt;prevarena = <span class="hljs-literal">NULL</span>;
+
+           }
+
+          .......
+
+          <span class="hljs-comment">// 从arena中获取一个pool</span>
+          pool = (poolp)usable_arenas-&gt;pool_address;
+          assert((block*)pool &lt;= (block*)usable_arenas-&gt;address +
+                                 ARENA_SIZE - POOL_SIZE);
+          pool-&gt;arenaindex = usable_arenas - arenas;
+          assert(&amp;arenas[pool-&gt;arenaindex] == usable_arenas);
+          pool-&gt;szidx = DUMMY_SIZE_IDX;
+
+          <span class="hljs-comment">// 更新 pool_address 向下一个节点</span>
+          usable_arenas-&gt;pool_address += POOL_SIZE;
+          <span class="hljs-comment">// 可用节点数量-1</span>
+          --usable_arenas-&gt;nfreepools;
+
+}
+</code></pre>
+<p>从全新的arena中获取一个pool</p>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/qPDIdJHRyUQ38x6.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/qPDIdJHRyUQ38x6.png" alt="image.png" loading="lazy" class="medium-zoom-image"></a></p>
+<p>假设arena是旧的, 怎么分配的pool, <strong>跟pool分配block原理一样，使用单链表记录freepools</strong></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_20">Copy</div><code class="language-c hljs" id="copy_target_20">pool = usable_arenas-&gt;freepools;
+<span class="hljs-keyword">if</span> (pool != <span class="hljs-literal">NULL</span>) {
+</code></pre>
+<p>当arena中一整块pool被释放的时候</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_21">Copy</div><code class="language-c hljs" id="copy_target_21"><span class="hljs-comment">/* Free a memory block allocated by pymalloc_alloc().
+   Return 1 if it was freed.
+   Return 0 if the block was not allocated by pymalloc_alloc(). */</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span>
+<span class="hljs-title">pymalloc_free</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *ctx, <span class="hljs-keyword">void</span> *p)</span> </span>{
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">arena_object</span>* <span class="hljs-title">ao</span>;</span>
+    uint nf;  <span class="hljs-comment">/* ao-&gt;nfreepools */</span>
+
+    <span class="hljs-comment">/* Link the pool to freepools.  This is a singly-linked
+               * list, and pool-&gt;prevpool isn't used there.
+              */</span>
+    ao = &amp;arenas[pool-&gt;arenaindex];
+    pool-&gt;nextpool = ao-&gt;freepools;
+    ao-&gt;freepools = pool;
+    nf = ++ao-&gt;nfreepools;
+}
+</code></pre>
+<p>在pool整块被释放的时候, 会将pool加入到<code>arena-&gt;freepools</code>作为单链表的表头, 然后, 在从非全新arena中分配pool时, 优先从<code>arena-&gt;freepools</code>里面取, 如果取不到, 再从arena内存块里面获取</p>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/GCkbIozLTwQXc7F.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/GCkbIozLTwQXc7F.png" alt="image.png" loading="lazy" class="medium-zoom-image"></a></p>
+<p><strong>注: 上图中nfreepools = n - 2</strong></p>
+<p>当arena1用完了，获取arena1指向的下一个节点arena2</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_22">Copy</div><code class="language-c hljs" id="copy_target_22"><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span>*
+<span class="hljs-title">pymalloc_alloc</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *ctx, <span class="hljs-keyword">size_t</span> nbytes)</span>
+</span>{
+
+
+          <span class="hljs-comment">// 当发现用完了最后一个pool!!!!!!!!!!!</span>
+          <span class="hljs-comment">// nfreepools = 0</span>
+          <span class="hljs-keyword">if</span> (usable_arenas-&gt;nfreepools == <span class="hljs-number">0</span>) {
+              assert(usable_arenas-&gt;nextarena == <span class="hljs-literal">NULL</span> ||
+                     usable_arenas-&gt;nextarena-&gt;prevarena ==
+                     usable_arenas);
+              <span class="hljs-comment">/* Unlink the arena:  it is completely allocated. */</span>
+
+              <span class="hljs-comment">// 找到下一个节点!</span>
+              usable_arenas = usable_arenas-&gt;nextarena;
+              <span class="hljs-comment">// 右下一个</span>
+              <span class="hljs-keyword">if</span> (usable_arenas != <span class="hljs-literal">NULL</span>) {
+                  usable_arenas-&gt;prevarena = <span class="hljs-literal">NULL</span>; <span class="hljs-comment">// 更新下一个节点的prevarens</span>
+                  assert(usable_arenas-&gt;address != <span class="hljs-number">0</span>);
+              }
+              <span class="hljs-comment">// 没有下一个, 此时 usable_arenas = NULL, 下次进行内存分配的时候, 就会从arenas数组中取一个</span>
+
+          }
+
+  }
+</code></pre>
+<p>注意: 这里有个逻辑, 就是每分配一个pool, 就检查是不是用到了最后一个, 如果是, 需要变更<code>usable_arenas</code>到下一个可用的节点, 如果没有可用的, 那么下次进行内存分配的时候, 会判定从arenas数组中取一个</p>
+<h3 id="1129011443">arena回收<a href="https://www.cnblogs.com/panlq/p/13056907.html#1129011443" class="esa-anchor">#</a></h3>
+<p>内存分配和回收最小单位是block, 当一个block被回收的时候, 可能触发pool被回收, pool被回收, 将会触发arena的回收机制</p>
+<ul>
+<li>
+<ol>
+<li>arena中所有pool都是闲置的(empty), 将arena内存释放, 返回给操作系统</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>如果arena中之前所有的pool都是占用的(used), 现在释放了一个pool(empty), 需要将 arena加入到usable_arenas, 会加入链表表头</li>
+</ol>
+</li>
+<li>
+<ol start="3">
+<li>如果arena中empty的pool个数n, 则从useable_arenas开始寻找可以插入的位置. 将arena插入. (<strong>useable_arenas是一个有序链表, 按empty pool的个数, 保证empty pool数量越多, 被使用的几率越小, 最终被整体释放的机会越大</strong>)</li>
+</ol>
+</li>
+</ul>
+<h3 id="305380158">内存分配的步骤<a href="https://www.cnblogs.com/panlq/p/13056907.html#305380158" class="esa-anchor">#</a></h3>
+<p><strong>关注点：如何寻找到一块可用的nbytes的blcok内存？</strong></p>
+<blockquote>
+<p>pool = usedpools[size + size]</p>
+<p>if pool:</p>
+<p>​	pool 没满，取一个blcok返回</p>
+<p>​	pool 满了，从下一个pool取一个blcok返回</p>
+<p>else:</p>
+<p>​	获取arena, 从里面初始化一个pool, 拿到第一个blcok返回</p>
+</blockquote>
+<p><strong>进行内存分配和销毁, 所有操作都是在pool上进行的</strong></p>
+<blockquote>
+<p><strong>问题:</strong> pool中所有block的size一样, 但是在arena中, 每个pool的size都可能不一样, 那么最终这些pool是怎么维护的? 怎么根据大小找到需要的block所在的pool? =&gt; <code>usedpools</code></p>
+</blockquote>
+<h2 id="4051088209">pool在内存池中的三种状态<a href="https://www.cnblogs.com/panlq/p/13056907.html#4051088209" class="esa-anchor">#</a></h2>
+<ol>
+<li>used状态：pool中至少有一个block已经被使用，并且至少有一个block未被使用，这种状态的pool受控于Python内部维护的usedpool数组</li>
+<li>full状态：pool中所有的block都已经被使用，这种状态的pool在arena中, 但不在arena的freepools链表中，处于full的pool各自独立, 不会被链表维护起来</li>
+<li>empty状态：pool中所有的blcok都未被使用，处于这个状态的pool的集合通过其pool_header中的nextpool构成一个链表，链表的表头示arena_object中的freepools</li>
+</ol>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/g3moVC27ERrkFv8.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/g3moVC27ERrkFv8.png" alt="image.png" loading="lazy" class="medium-zoom-image"></a></p>
+<p>Python内部维护的usedpools数组是一个非常巧妙的实现，维护着所有的处于used状态的pool，当申请内存时，python就会通过usedpools寻找到一个可用的pool<code>(处于used状态)</code>，从中分配一个block。因此我们想，一定有一个usedpools相关联的机制，完成从申请的内存的大小到size class index之间的转换，否则python就无法找到最合适的pool了。这种机制和usedpools的结构有着密切的关系，我们看一下它的结构</p>
+<h3 id="53323591">usedpools<a href="https://www.cnblogs.com/panlq/p/13056907.html#53323591" class="esa-anchor">#</a></h3>
+<p>usedpools数组: 维护着所有处于used状态的pool, 当申请内存的时候, 会通过usedpools寻找到一块可用的(处于used状态的)pool, 从中分配一个block。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_23">Copy</div><code class="language-c hljs" id="copy_target_23"><span class="hljs-comment">//obmalloc.c</span>
+<span class="hljs-keyword">typedef</span> <span class="hljs-keyword">uint8_t</span> block;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> PTA(x)  ((poolp )((uint8_t *)&amp;(usedpools[2*(x)]) - 2*sizeof(block *)))</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> PT(x)   PTA(x), PTA(x)</span>
+
+<span class="hljs-comment">//在我当前的机器就是512/8=64个，对应的size class index就是从0到63</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> NB_SMALL_SIZE_CLASSES   (SMALL_REQUEST_THRESHOLD / ALIGNMENT)</span>
+
+<span class="hljs-keyword">static</span> poolp usedpools[<span class="hljs-number">2</span> * ((NB_SMALL_SIZE_CLASSES + <span class="hljs-number">7</span>) / <span class="hljs-number">8</span>) * <span class="hljs-number">8</span>] = {
+    PT(<span class="hljs-number">0</span>), PT(<span class="hljs-number">1</span>), PT(<span class="hljs-number">2</span>), PT(<span class="hljs-number">3</span>), PT(<span class="hljs-number">4</span>), PT(<span class="hljs-number">5</span>), PT(<span class="hljs-number">6</span>), PT(<span class="hljs-number">7</span>)
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> NB_SMALL_SIZE_CLASSES &gt; 8</span>
+    , PT(<span class="hljs-number">8</span>), PT(<span class="hljs-number">9</span>), PT(<span class="hljs-number">10</span>), PT(<span class="hljs-number">11</span>), PT(<span class="hljs-number">12</span>), PT(<span class="hljs-number">13</span>), PT(<span class="hljs-number">14</span>), PT(<span class="hljs-number">15</span>)
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> NB_SMALL_SIZE_CLASSES &gt; 16</span>
+    , PT(<span class="hljs-number">16</span>), PT(<span class="hljs-number">17</span>), PT(<span class="hljs-number">18</span>), PT(<span class="hljs-number">19</span>), PT(<span class="hljs-number">20</span>), PT(<span class="hljs-number">21</span>), PT(<span class="hljs-number">22</span>), PT(<span class="hljs-number">23</span>)
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> NB_SMALL_SIZE_CLASSES &gt; 24</span>
+    , PT(<span class="hljs-number">24</span>), PT(<span class="hljs-number">25</span>), PT(<span class="hljs-number">26</span>), PT(<span class="hljs-number">27</span>), PT(<span class="hljs-number">28</span>), PT(<span class="hljs-number">29</span>), PT(<span class="hljs-number">30</span>), PT(<span class="hljs-number">31</span>)
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> NB_SMALL_SIZE_CLASSES &gt; 32</span>
+    , PT(<span class="hljs-number">32</span>), PT(<span class="hljs-number">33</span>), PT(<span class="hljs-number">34</span>), PT(<span class="hljs-number">35</span>), PT(<span class="hljs-number">36</span>), PT(<span class="hljs-number">37</span>), PT(<span class="hljs-number">38</span>), PT(<span class="hljs-number">39</span>)
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> NB_SMALL_SIZE_CLASSES &gt; 40</span>
+    , PT(<span class="hljs-number">40</span>), PT(<span class="hljs-number">41</span>), PT(<span class="hljs-number">42</span>), PT(<span class="hljs-number">43</span>), PT(<span class="hljs-number">44</span>), PT(<span class="hljs-number">45</span>), PT(<span class="hljs-number">46</span>), PT(<span class="hljs-number">47</span>)
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> NB_SMALL_SIZE_CLASSES &gt; 48</span>
+    , PT(<span class="hljs-number">48</span>), PT(<span class="hljs-number">49</span>), PT(<span class="hljs-number">50</span>), PT(<span class="hljs-number">51</span>), PT(<span class="hljs-number">52</span>), PT(<span class="hljs-number">53</span>), PT(<span class="hljs-number">54</span>), PT(<span class="hljs-number">55</span>)
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> NB_SMALL_SIZE_CLASSES &gt; 56</span>
+    , PT(<span class="hljs-number">56</span>), PT(<span class="hljs-number">57</span>), PT(<span class="hljs-number">58</span>), PT(<span class="hljs-number">59</span>), PT(<span class="hljs-number">60</span>), PT(<span class="hljs-number">61</span>), PT(<span class="hljs-number">62</span>), PT(<span class="hljs-number">63</span>)
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> NB_SMALL_SIZE_CLASSES &gt; 64</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">error</span> <span class="hljs-meta-string">"NB_SMALL_SIZE_CLASSES should be less than 64"</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span> <span class="hljs-comment">/* NB_SMALL_SIZE_CLASSES &gt; 64 */</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span> <span class="hljs-comment">/* NB_SMALL_SIZE_CLASSES &gt; 56 */</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span> <span class="hljs-comment">/* NB_SMALL_SIZE_CLASSES &gt; 48 */</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span> <span class="hljs-comment">/* NB_SMALL_SIZE_CLASSES &gt; 40 */</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span> <span class="hljs-comment">/* NB_SMALL_SIZE_CLASSES &gt; 32 */</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span> <span class="hljs-comment">/* NB_SMALL_SIZE_CLASSES &gt; 24 */</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span> <span class="hljs-comment">/* NB_SMALL_SIZE_CLASSES &gt; 16 */</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span> <span class="hljs-comment">/* NB_SMALL_SIZE_CLASSES &gt;  8 */</span></span>
+};
+
+</code></pre>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/5pPzyvVek6cHiG3.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/5pPzyvVek6cHiG3.png" alt="image.png" loading="lazy" class="medium-zoom-image"></a></p>
+<p>如果正在申请28字节， python首先会获取(size class index) <code> size = (uint )(nbytes - 1) &gt;&gt; ALIGNMENT_SHIFT</code> 显然这里<code>size=3</code>， 那么在usedpools中，寻找第3+3=6个元素，发现usedpools[6]的值是指向usedpools[4]的地址</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_24">Copy</div><code class="language-c hljs" id="copy_target_24"><span class="hljs-comment">//obmalloc.c</span>
+<span class="hljs-comment">/* Pool for small blocks. */</span>
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pool_header</span> {</span>
+    <span class="hljs-class"><span class="hljs-keyword">union</span> {</span> block *_padding;
+            uint count; } ref;          <span class="hljs-comment">/* 当然pool里面的block数量    */</span>
+    block *freeblock;                   <span class="hljs-comment">/* 一个链表，指向下一个可用的block   */</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pool_header</span> *<span class="hljs-title">nextpool</span>;</span>       <span class="hljs-comment">/* 指向下一个pool  */</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pool_header</span> *<span class="hljs-title">prevpool</span>;</span>       <span class="hljs-comment">/* 指向上一个pool       ""        */</span>
+    uint arenaindex;                    <span class="hljs-comment">/* 在area里面的索引 */</span>
+    uint szidx;                         <span class="hljs-comment">/* block的大小(固定值？后面说)     */</span>
+    uint nextoffset;                    <span class="hljs-comment">/* 下一个可用block的内存偏移量         */</span>
+    uint maxnextoffset;                 <span class="hljs-comment">/* 最后一个block距离开始位置的距离     */</span>
+};
+
+</code></pre>
+<blockquote>
+<p>显然是从usedpools[6]<code>(即usedpools+4)</code>开始向后偏移8个字节(一个ref的大小加上一个freeblock的大小)后的内存，正好是usedpools[6]的地址<code>(即usedpools+6)</code>，这是python内部的trick</p>
+</blockquote>
+<p>当我们要申请一个size class为32字节的pool，想要将其放入这个usedpools中时，要怎么做呢？从上面的描述我们知道，只需要进行<code>usedpools[i+i] -&gt; nextpool = pool</code>即可，其中i为size class index，对应于32字节，这个i为3.当下次需要访问size class 为32字节<code>(size class index为3)</code>的pool时，只需要简单地访问usedpools[3+3]就可以得到了。python正是使用这个usedpools快速地从众多的pool中快速地寻找到一个最适合当前内存需求的pool，从中分配一块block。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_25">Copy</div><code class="language-c hljs" id="copy_target_25"><span class="hljs-comment">//obmalloc.c</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span>
+<span class="hljs-title">pymalloc_alloc</span><span class="hljs-params">(<span class="hljs-keyword">void</span> *ctx, <span class="hljs-keyword">void</span> **ptr_p, <span class="hljs-keyword">size_t</span> nbytes)</span>
+</span>{
+    block *bp;
+    poolp pool;
+    poolp next;
+    uint size;
+    ...
+    LOCK();
+    <span class="hljs-comment">//获得size class index</span>
+    size = (uint)(nbytes - <span class="hljs-number">1</span>) &gt;&gt; ALIGNMENT_SHIFT;
+    <span class="hljs-comment">//直接通过usedpools[size+size]，这里的size不就是我们上面说的i吗？</span>
+    pool = usedpools[size + size];
+    <span class="hljs-comment">//如果usedpools中有可用的pool</span>
+    <span class="hljs-keyword">if</span> (pool != pool-&gt;nextpool) {
+        ... <span class="hljs-comment">//有可用pool</span>
+    }
+    ... <span class="hljs-comment">//无可用pool，尝试获取empty状态的pool</span>
+}  
+</code></pre>
+<h3 id="4167947421">内存池全局结构<a href="https://www.cnblogs.com/panlq/p/13056907.html#4167947421" class="esa-anchor">#</a></h3>
+<p><a href="./Python3 源码阅读 - 内存管理机制_files/81sVxBNoFSKXlwh.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 内存管理机制_files/81sVxBNoFSKXlwh.png" alt="image.png" loading="lazy" class="medium-zoom-image"></a></p>
+<p>参考:</p>
+<p><a href="http://wklken.me/posts/2015/08/29/python-source-memory-2.html" target="_blank">pyhton源码阅读-内存管理机制</a></p>
+<p><a href="https://www.cnblogs.com/traditional/p/12202429.html" target="_blank">python源码解析第17章-python内存管理与垃圾回收</a></p>
+<p>后期查缺补漏需要看的文章</p>
+<p><a href="https://github.com/zpoint/CPython-Internals/blob/master/Interpreter/memory_management/memory_management_cn.md" target="_blank">Memory management by Zpoint</a><br>
+<a href="https://rushter.com/blog/python-memory-managment/" target="_blank">Memory management in Python</a></p>
+
+</div>
+<div id="MySignature" style="display: block;"><div class="esa-post-signature"> 
+                        <p>作者：
+            JonPan
+        </p> 
+                        <p>出处：<a href="https://www.cnblogs.com/panlq/p/13056907.html">https://www.cnblogs.com/panlq/p/13056907.html</a></p> 
+                        <p>版权：本文采用「<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">署名-非商业性使用-相同方式共享 4.0 国际</a>」知识共享许可协议进行许可。</p> 
+                        <p></p> 
+                    </div></div>
+<div class="clear"></div>
+<div id="blog_post_info_block"><div id="BlogPostCategory">
+    分类: 
+            <a href="https://www.cnblogs.com/panlq/category/1211325.html" target="_blank">Python</a>,             <a href="https://www.cnblogs.com/panlq/category/1594314.html" target="_blank">每日得到记录</a></div>
+<div id="EntryTag">
+    标签: 
+            <a href="https://www.cnblogs.com/panlq/tag/python/">python</a></div>
+
+    <div id="blog_post_info">
+<div id="green_channel">
+        <a href="javascript:void(0);" id="green_channel_digg" onclick="DiggIt(13056907,cb_blogId,1);green_channel_success(this,&#39;谢谢推荐！&#39;);">好文要顶</a>
+        <a id="green_channel_follow" onclick="follow(&#39;fb7898b6-c71b-e511-b908-9dcfd8948a71&#39;);" href="javascript:void(0);">关注我</a>
+    <a id="green_channel_favorite" onclick="AddToWz(cb_entryId);return false;" href="javascript:void(0);">收藏该文</a>
+    <a id="green_channel_weibo" href="javascript:void(0);" title="分享至新浪微博" onclick="ShareToTsina()"><img src="./Python3 源码阅读 - 内存管理机制_files/icon_weibo_24.png" alt=""></a>
+    <a id="green_channel_wechat" href="javascript:void(0);" title="分享至微信" onclick="shareOnWechat()"><img src="./Python3 源码阅读 - 内存管理机制_files/wechat.png" alt=""></a>
+</div>
+<div id="author_profile">
+    <div id="author_profile_info" class="author_profile_info">
+            <a href="https://home.cnblogs.com/u/panlq/" target="_blank"><img src="./Python3 源码阅读 - 内存管理机制_files/20200607172935.png" class="author_avatar" alt=""></a>
+        <div id="author_profile_detail" class="author_profile_info">
+            <a href="https://home.cnblogs.com/u/panlq/">JonPan</a><br>
+            <a href="https://home.cnblogs.com/u/panlq/followees/">关注 - 36</a><br>
+            <a href="https://home.cnblogs.com/u/panlq/followers/">粉丝 - 10</a>
+        </div>
+    </div>
+    <div class="clear"></div>
+    <div id="author_profile_honor"></div>
+    <div id="author_profile_follow">
+                <a href="javascript:void(0);" onclick="follow(&#39;fb7898b6-c71b-e511-b908-9dcfd8948a71&#39;);return false;">+加关注</a>
+    </div>
+</div>
+<div id="div_digg">
+    <div class="diggit" onclick="votePost(13056907,&#39;Digg&#39;)">
+        <span class="diggnum" id="digg_count">0</span>
+    </div>
+    <div class="buryit" onclick="votePost(13056907,&#39;Bury&#39;)">
+        <span class="burynum" id="bury_count">0</span>
+    </div>
+    <div class="clear"></div>
+    <div class="diggword" id="digg_tips">
+    </div>
+</div>
+
+<script type="text/javascript">
+    currentDiggType = 0;
+</script></div>
+    <div class="clear"></div>
+    <div id="post_next_prev">
+
+    <a href="https://www.cnblogs.com/panlq/p/12367757.html" class="p_n_p_prefix">« </a> 上一篇：    <a href="https://www.cnblogs.com/panlq/p/12367757.html" title="发布于 2020-02-26 16:59">Python性能优化方案</a>
+    <br>
+    <a href="https://www.cnblogs.com/panlq/p/13069726.html" class="p_n_p_prefix">» </a> 下一篇：    <a href="https://www.cnblogs.com/panlq/p/13069726.html" title="发布于 2020-06-08 23:40">python3 源码阅读-虚拟机运行原理</a>
+
+</div>
+</div>
+            </div>
+            <div class="postDesc">posted @ 
+<span id="post-date">2020-06-06 22:33</span>&nbsp;
+<a href="https://www.cnblogs.com/panlq/">JonPan</a>&nbsp;
+阅读(<span id="post_view_count">427</span>)&nbsp;
+评论(<span id="post_comment_count">0</span>)&nbsp;
+<a href="https://i.cnblogs.com/EditPosts.aspx?postid=13056907" rel="nofollow">编辑</a>&nbsp;
+<a href="javascript:void(0)" onclick="AddToWz(13056907);return false;">收藏</a>&nbsp;
+<a href="javascript:void(0)" onclick="reportManager.report({ currentUserId: &#39;&#39;, targetType: &#39;blogPost&#39;, targetId: &#39;13056907&#39;, targetLink: &#39;https://www.cnblogs.com/panlq/p/13056907.html&#39;, title: &#39;Python3 源码阅读 - 内存管理机制&#39; })">举报</a></div>
+        </div>
+	    
+	    
+    </div><!--end: topics 文章、评论容器-->
+</div>
+<script src="./Python3 源码阅读 - 内存管理机制_files/highlight.min.js.下载"></script>
+<script>markdown_highlight();</script>
+<script>
+    var allowComments = true, cb_blogId = 416394, cb_blogApp = 'panlq', cb_blogUserGuid = 'fb7898b6-c71b-e511-b908-9dcfd8948a71';
+    var cb_entryId = 13056907, cb_entryCreatedDate = '2020-06-06 22:33', cb_postType = 1;
+    updatePostStats(
+        [cb_entryId],
+        function(id, count) { $("#post_view_count").text(count) },
+        function(id, count) { $("#post_comment_count").text(count) })
+    zoomManager.apply("#cnblogs_post_body img:not(.code_img_closed):not(.code_img_opened)");
+</script>
+<a name="!comments"></a>
+<div id="blog-comments-placeholder"></div>
+<div id="comment_form" class="commentform">
+    <a name="commentform"></a>
+    <div id="divCommentShow"></div>
+    <div id="comment_nav"><span id="span_refresh_tips"></span><a href="javascript:void(0);" onclick="return RefreshCommentList();" id="lnk_RefreshComments" runat="server" clientidmode="Static">刷新评论</a><a href="https://www.cnblogs.com/panlq/p/13056907.html#" onclick="return RefreshPage();">刷新页面</a><a href="https://www.cnblogs.com/panlq/p/13056907.html#top">返回顶部</a></div>
+    <div id="comment_form_container" style="visibility: visible;"><div class="login_tips">
+    登录后才能查看或发表评论，立即 <a rel="nofollow" href="javascript:void(0);" class="underline" onclick="return account.login(&#39;!comments&#39;);">登录</a> 或者
+    <a href="https://www.cnblogs.com/">逛逛</a> 博客园首页
+</div>
+</div>
+    <div class="ad_text_commentbox" id="ad_text_under_commentbox"></div>
+    <div id="ad_t2"><a href="https://brands.cnblogs.com/huawei" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-华为专区&#39;)">【推荐】资料合集 | HarmonyOS从入门到大神学习资料下载合集</a><br><a href="http://www.uccpsoft.com/index.htm" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-ucancode&#39;)">【推荐】大型组态、工控、仿真、CAD\GIS 50万行VC++源码免费下载!</a><br><a href="https://www.aliyun.com/activity/daily/bestoffer?userCode=swh7dvlt" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-阿里云-cps&#39;)">【推荐】阿里云爆品销量榜单出炉，精选爆款产品低至0.55折</a><br><a href="http://www.moojnn.com/?source=bokeyuan" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-魔镜&#39;)">【推荐】限时秒杀！国云大数据魔镜，企业级云分析平台</a><br></div>
+    <div id="opt_under_post"></div>
+    <div id="cnblogs_c1" class="under-post-card">
+        <div id="div-gpt-ad-1592365906576-0" style="width: 300px; height: 250px;" data-google-query-id="CO2Dg-OBh_ECFdDDfAoduakNhA"><div id="google_ads_iframe_/1090369/C1_0__container__" style="border: 0pt none;"><iframe id="google_ads_iframe_/1090369/C1_0" title="3rd party ad content" name="google_ads_iframe_/1090369/C1_0" width="300" height="250" scrolling="no" marginwidth="0" marginheight="0" frameborder="0" allow="conversion-measurement &#39;src&#39;" style="border: 0px; vertical-align: bottom;" data-google-container-id="1" data-load-complete="true" src="./Python3 源码阅读 - 内存管理机制_files/saved_resource.html"></iframe></div></div>
+    </div>
+    <div id="under_post_card1"><div class="under-post-card"><b>园子动态</b>：<br>· <a href="https://www.cnblogs.com/cmt/p/14585828.html" target="_blank">致园友们的一封检讨书：都是我们的错</a><br>· <a href="https://www.cnblogs.com/cmt/p/14595262.html" target="_blank">数据库实例 CPU 100% 引发全站故障</a><br>· <a href="https://www.cnblogs.com/cmt/p/14217355.html" target="_blank">发起一个开源项目：博客引擎 fluss</a><br></div></div>
+    <div id="cnblogs_c2" class="under-post-card">
+        <div id="div-gpt-ad-1592366332455-0" style="width: 468px; height: 60px;" data-google-query-id="CO6Dg-OBh_ECFdDDfAoduakNhA"><div id="google_ads_iframe_/1090369/C2_0__container__" style="border: 0pt none;"><iframe id="google_ads_iframe_/1090369/C2_0" title="3rd party ad content" name="google_ads_iframe_/1090369/C2_0" width="468" height="60" scrolling="no" marginwidth="0" marginheight="0" frameborder="0" allow="conversion-measurement &#39;src&#39;" style="border: 0px; vertical-align: bottom;" data-google-container-id="2" data-load-complete="true" src="./Python3 源码阅读 - 内存管理机制_files/saved_resource(1).html"></iframe></div></div>
+    </div>
+    <div id="under_post_card2"><div class="itnews under-post-card">
+    <b>最新新闻</b>：
+    <br>
+ ·          <a href="https://news.cnblogs.com/n/695496/" target="_blank">利路修代言、生椰拿铁断货……慢下来的瑞幸活得还挺好？</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695500/" target="_blank">26元就能拨5000个骚扰电话？短信、电话骚扰为什么屡禁不止</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695498/" target="_blank">为什么 iPhone 的原装充电线容易坏？</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695501/" target="_blank">一片红海的手机市场，难以真我的Realme</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695514/" target="_blank">苹果新系统很鸿蒙！iPad终于能写代码了，iPhone竟成异地恋神器 | WWDC 2021</a>
+        <br>
+    » <a href="https://news.cnblogs.com/" title="IT 新闻" target="_blank">更多新闻...</a>
+</div></div>
+    <div id="HistoryToday" class="under-post-card"></div>
+    <script type="text/javascript">
+       var commentManager = new blogCommentManager();
+       commentManager.renderComments(0);
+       fixPostBody();
+       deliverBigBanner();
+setTimeout(function() { incrementViewCount(cb_entryId); }, 50);       deliverT2();
+       deliverC1C2();
+       loadNewsAndKb();
+       loadBlogSignature();
+LoadPostCategoriesTags(cb_blogId, cb_entryId);       LoadPostInfoBlock(cb_blogId, cb_entryId, cb_blogApp, cb_blogUserGuid);
+       GetPrevNextPost(cb_entryId, cb_blogId, cb_entryCreatedDate, cb_postType);
+       loadOptUnderPost();
+       GetHistoryToday(cb_blogId, cb_blogApp, cb_entryCreatedDate);
+    </script>
+</div>
+
+	</div><!--end: forFlow -->
+	</div><!--end: mainContent 主体内容容器-->
+	<div id="sideBar">
+		<div id="sideBarMain">
+			<div id="sidebar_news" class="newsItem"><!--done-->
+<h3 class="catListTitle">公告</h3>
+
+<div id="blog-news">
+    
+<script type="text/javascript">window['__document_write_ajax_callbacks__']['4']();</script><script type="text/javascript">window['__document_write_ajax_callbacks__']['5']();</script><script>window['__document_write_ajax_callbacks__']['1']();</script>
+<script type="text/javascript">window['__document_write_ajax_callbacks__']['6']();</script><script type="text/javascript">window['__document_write_ajax_callbacks__']['2']();</script>
+    <div id="profile_block">
+        昵称：
+        <a href="https://home.cnblogs.com/u/panlq/">
+            JonPan
+        </a>
+        <br>
+        园龄：
+        <a href="https://home.cnblogs.com/u/panlq/" title="入园时间：2015-06-26">
+            5年11个月
+        </a>
+        <br>
+        粉丝：
+        <a href="https://home.cnblogs.com/u/panlq/followers/">
+            10
+        </a>
+        <br>
+        关注：
+        <a href="https://home.cnblogs.com/u/panlq/followees/">
+            36
+        </a>
+        <div id="p_b_follow">
+<a href="javascript:void(0)" onclick="follow(&#39;fb7898b6-c71b-e511-b908-9dcfd8948a71&#39;)">+加关注</a></div>
+        <script type="text/javascript">window['__document_write_ajax_callbacks__']['7']();</script><script>window['__document_write_ajax_callbacks__']['3']();</script>
+    </div>
+</div>
+
+</div>
+<div id="sidebar_c3"></div>
+			<div id="blog-calendar" style="">
+
+<table id="blogCalendar" class="Cal" cellspacing="0" cellpadding="0" title="Calendar" border="0">
+    <tbody>
+        <tr>
+            <td colspan="7">
+                <table class="CalTitle" cellspacing="0" border="0">
+                    <tbody>
+                        <tr>
+                            <td class="CalNextPrev">
+                                <a href="javascript:void(0);" onclick="loadBlogCalendar(&#39;2021/05/08&#39;); return false;">&lt;</a>
+                            </td>
+                            <td align="center">2021年6月</td>
+                            <td align="right" class="CalNextPrev">
+                                <a href="javascript:void(0);" onclick="loadBlogCalendar(&#39;2021/07/08&#39;); return false;">&gt;</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    <tr>
+        <th class="CalDayHeader" align="center" abbr="日" scope="col">日</th>
+        <th class="CalDayHeader" align="center" abbr="一" scope="col">一</th>
+        <th class="CalDayHeader" align="center" abbr="二" scope="col">二</th>
+        <th class="CalDayHeader" align="center" abbr="三" scope="col">三</th>
+        <th class="CalDayHeader" align="center" abbr="四" scope="col">四</th>
+        <th class="CalDayHeader" align="center" abbr="五" scope="col">五</th>
+        <th class="CalDayHeader" align="center" abbr="六" scope="col">六</th>
+    </tr>
+            <tr>
+                            <td class="CalOtherMonthDay" align="center">30</td>
+                            <td class="CalOtherMonthDay" align="center">31</td>
+                        <td class="" align="center">
+                            1
+                        </td>
+                        <td class="" align="center">
+                            2
+                        </td>
+                        <td class="" align="center">
+                            3
+                        </td>
+                        <td class="" align="center">
+                            4
+                        </td>
+                    <td class="CalWeekendDay" align="center">
+                        5
+                    </td>
+            </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            6
+                        </td>
+                            <td class="" align="center">
+                                7
+                            </td>
+                            <td class="CalTodayDay" align="center">
+                                8
+                            </td>
+                            <td class="" align="center">
+                                9
+                            </td>
+                            <td class="" align="center">
+                                10
+                            </td>
+                            <td class="" align="center">
+                                11
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            12
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            13
+                        </td>
+                            <td class="" align="center">
+                                14
+                            </td>
+                            <td class="" align="center">
+                                15
+                            </td>
+                            <td class="" align="center">
+                                16
+                            </td>
+                            <td class="" align="center">
+                                17
+                            </td>
+                            <td class="" align="center">
+                                18
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            19
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            20
+                        </td>
+                            <td class="" align="center">
+                                21
+                            </td>
+                            <td class="" align="center">
+                                22
+                            </td>
+                            <td class="" align="center">
+                                23
+                            </td>
+                            <td class="" align="center">
+                                24
+                            </td>
+                            <td class="" align="center">
+                                25
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            26
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            27
+                        </td>
+                            <td class="" align="center">
+                                28
+                            </td>
+                            <td class="" align="center">
+                                29
+                            </td>
+                            <td class="" align="center">
+                                30
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                1
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                2
+                            </td>
+                        <td class="CalOtherMonthDay" align="center">
+                            3
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalOtherMonthDay" align="center">
+                            4
+                        </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                5
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                6
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                7
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                8
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                9
+                            </td>
+                        <td class="CalOtherMonthDay" align="center">
+                            10
+                        </td>
+                </tr>
+    </tbody>
+</table></div><script>loadBlogDefaultCalendar();</script>			
+			<div id="leftcontentcontainer">
+				<div id="blog-sidecolumn"><!-- 搜索 -->
+<div id="sidebar_search" class="sidebar-block">
+    
+</div>
+
+<!-- 常用链接 -->
+
+
+<!-- 最新随笔 -->
+
+
+<!-- 我的标签 -->
+<div id="sidebar_toptags" class="sidebar-block"><div class="catListTag">
+<h3 class="catListTitle">我的标签</h3>
+<ul>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/python/">python<span class="tag-count">(23)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/js/">js<span class="tag-count">(5)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/Redis/">Redis<span class="tag-count">(4)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/python%E6%A8%A1%E5%9D%97%E5%AD%A6%E4%B9%A0/">python模块学习<span class="tag-count">(4)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/Bug%E8%AE%B0%E5%BD%95/">Bug记录<span class="tag-count">(4)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/mysql/">mysql<span class="tag-count">(4)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/%E9%9D%A2%E8%AF%95%E9%A2%98/">面试题<span class="tag-count">(3)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/golang/">golang<span class="tag-count">(2)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/Linux/">Linux<span class="tag-count">(2)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/leetcode/">leetcode<span class="tag-count">(2)</span></a>
+        </li>
+    <li>
+        <a href="https://www.cnblogs.com/panlq/tag/">更多</a>
+    </li>
+
+</ul>
+</div>
+
+</div>
+
+<!-- 积分与排名 -->
+
+
+<!-- 随笔分类、随笔档案、文章分类、新闻分类、相册、链接 -->
+<div id="sidebar_categories">
+
+    <div id="sidebar_postcategory" class="catListPostCategory sidebar-block">
+        <h3 class="catListTitle">
+            
+随笔分类
+
+
+
+        </h3>
+
+        <ul>
+
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1655874.html" rel="" target="">
+    Golang(1)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1783417.html" rel="" target="">
+    Linux相关内容(3)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1211325.html" rel="" target="">
+    Python(21)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1594314.html" rel="" target="">
+    每日得到记录(8)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1486847.html" rel="" target="">
+    每日一题(3)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1211324.html" rel="" target="">
+    数据库(5)
+</a>
+ 
+
+                </li>                
+            
+        </ul>
+
+
+    </div>    
+    <div id="sidebar_记录一些前辈的博客，学习" class="catList记录一些前辈的博客，学习 sidebar-block">
+        <h3 class="catListTitle">
+            
+三人行，必有我师
+
+
+
+        </h3>
+
+        <ul>
+
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.xilidou.com/" rel="nofollow noopener noreferrer" target="_blank">
+    阿里-犀利豆
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://vimiix.com/" rel="nofollow noopener noreferrer" target="">
+    vimiix
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="http://jm.taobao.org/" rel="nofollow noopener noreferrer" target="">
+     阿里中间件团队博客
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://draveness.me/golang/docs/part1-prerequisite/ch02-compile/golang-compile-intro/" rel="nofollow noopener noreferrer" target="_blank">
+    Go 语言设计与实现
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.kingname.info/" rel="nofollow noopener noreferrer" target="">
+    谢乾坤 | Kingname
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="http://draveness.me/" rel="nofollow noopener noreferrer" target="">
+    面向信仰编程-优质Go文章
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://tech.meituan.com/" rel="nofollow noopener noreferrer" target="">
+    美团技术团队
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://juejin.im/post/5e9da97ff265da47da2ae848#heading-14" rel="nofollow noopener noreferrer" target="">
+    微爱CTO-张铁蕾
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://my.oschina.net/jxcdwangtao" rel="nofollow noopener noreferrer" target="">
+    西电王涛
+</a>
+ 
+
+                </li>                
+            
+        </ul>
+
+
+    </div>    
+</div>
+
+<!-- 最新评论 -->
+<div id="sidebar_recentcomments" class="sidebar-block"><div class="catListComment">
+<h3 class="catListTitle">最新评论</h3>
+
+	<div class="RecentCommentBlock">
+        <ul>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/panlq/p/13704965.html">1. Re:WSL2 配置及ubuntu18.04安装mysql8.0+</a></li>
+                    <li class="recent_comment_body"><p>你好，我想问一下，既然使用sudo apt install mysql-server，为什么要先配置mysql-apt-config?</p>
+</li>
+                    <li class="recent_comment_author">--junjiezhou</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/panlq/p/10642725.html">2. Re:nginx+uwsgi+flask+supervisor 项目部署</a></li>
+                    <li class="recent_comment_body"><p>手动点赞</p>
+</li>
+                    <li class="recent_comment_author">--南风生生</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/panlq/p/13369842.html">3. Re:Flask前后端分离项目案例</a></li>
+                    <li class="recent_comment_body"><p>@拥剑公子<br>
+文中有贴项目git<br>
+<a href="https://www.cnblogs.com/panlq/p/13056907.html">项目地址git</a></p>
+</li>
+                    <li class="recent_comment_author">--JonPan</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/panlq/p/13369842.html">4. Re:Flask前后端分离项目案例</a></li>
+                    <li class="recent_comment_body"><p>来个github demo就完美了</p>
+</li>
+                    <li class="recent_comment_author">--拥剑公子</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/panlq/p/13266426.html">5. Re:Flask 上下文机制和线程隔离</a></li>
+                    <li class="recent_comment_body">@伊贺双刀流 当一个请求过来的时候，在请求上下文被入栈之前，会判断当前的环境是否有AppContext ， 如果没有就获取一个，（current_app是Flask应用的代理对象，是与当前线程或协程隐...</li>
+                    <li class="recent_comment_author">--JonPan</li>
+        </ul>
+    </div>
+</div>
+
+</div>
+
+
+<!-- 阅读排行榜 -->
+<div id="sidebar_topviewedposts" class="sidebar-block"><div class="catListView">
+<h3 class="catListTitle">阅读排行榜</h3>
+	<div id="TopViewPostsBlock">
+        <ul style="word-break:break-all">
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/9307203.html">
+                            1. 斐波那契数列的5种python实现写法(131285)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/8868108.html">
+                            2. 解决-Django使用filter过滤时间，无法获取月份的问题(4077)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/13369842.html">
+                            3. Flask前后端分离项目案例(1992)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/13704965.html">
+                            4. WSL2 配置及ubuntu18.04安装mysql8.0+(1916)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/9058247.html">
+                            5. python爬虫练习 -- 签名器+GUI界面（Tkinter）(1731)
+                        </a>
+                    </li>
+        </ul>
+    </div>
+</div>
+
+</div>
+
+<!-- 评论排行榜 -->
+<div id="sidebar_topcommentedposts" class="sidebar-block"><div class="catListFeedback">
+<h3 class="catListTitle">评论排行榜</h3>
+	<div id="TopFeedbackPostsBlock">
+        <ul style="word-break:break-all">
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/13266426.html">
+                            1. Flask 上下文机制和线程隔离(7)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/9307203.html">
+                            2. 斐波那契数列的5种python实现写法(7)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/13369842.html">
+                            3. Flask前后端分离项目案例(2)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/10642725.html">
+                            4. nginx+uwsgi+flask+supervisor 项目部署(2)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/13704965.html">
+                            5. WSL2 配置及ubuntu18.04安装mysql8.0+(1)
+                        </a>
+                    </li>
+        </ul>
+    </div>
+</div>
+
+</div>
+
+<!-- 推荐排行榜 -->
+<div id="sidebar_topdiggedposts" class="sidebar-block">
+<div id="topdigg_posts_wrap">
+    <div class="catListView">
+        <h3 class="catListTitle">推荐排行榜</h3>
+        <div id="TopDiggPostsBlock">
+            <ul style="word-break: break-all">
+                        <li>
+                            <a href="https://www.cnblogs.com/panlq/p/13180589.html">
+                                1. 深入理解进程，线程，协程(4)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/panlq/p/13430903.html">
+                                2. 数据结构中的树(二叉树、二叉搜索树、AVL树)(3)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/panlq/p/9307203.html">
+                                3. 斐波那契数列的5种python实现写法(3)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/panlq/p/13704965.html">
+                                4. WSL2 配置及ubuntu18.04安装mysql8.0+(1)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/panlq/p/13266426.html">
+                                5. Flask 上下文机制和线程隔离(1)
+                            </a>
+                        </li>
+            </ul>
+        </div>
+    </div>
+</div></div></div>
+                    <script>loadBlogSideColumn();</script>
+			</div>			
+		</div><!--end: sideBarMain -->
+	</div><!--end: sideBar 侧边栏容器 -->
+	<div class="clear"></div>
+	</div><!--end: main -->
+	<div class="clear"></div>
+	<div id="footer">
+		<!--done-->
+Copyright © 2021 JonPan
+<br><span id="poweredby">Powered by .NET 5.0 on Kubernetes</span>
+
+
+
+	<span class="esa-copyright">&amp; Theme <a href="https://github.com/esofar/cnblogs-theme-silence" target="_blank">Silence v2.0.2</a></span></div><!--end: footer -->
+</div><!--end: home 自定义的最大容器 -->
+
+
+    
+
+    <input type="hidden" id="antiforgery_token" value="CfDJ8L-rpLgFVEJMgssCVvNUAjvZOPqDHk_IVKLqqD4U3d-djfCsraiyu9pg33R4_v-7LKE5yNF60XZXR5Y1LQYng4kVPQ0pQFEdTne34lm40fqz1j_4uXwBzFUaFGqDO9FAGXHhL_EPc1ZTzhyMHJ0i2cM">
+
+
+<script type="text/javascript">
+    $.silence({
+        avatar: 'https://images.cnblogs.com/cnblogs_com/panlq/1629174/o_200119155214avatar2.jpg',
+        favicon: 'https://images.cnblogs.com/cnblogs_com/panlq/1629174/o_200119145814favicon.png',
+        navigation: [
+            {
+                title: '标签',
+                url: 'https://www.cnblogs.com/panlq/tag/'
+            },
+            {
+                title: '归档',
+                url: 'https://www.cnblogs.com/panlq/p/'
+            },
+            {
+                title: '每日一题',
+                url: 'https://www.cnblogs.com/panlq/category/1486847.html',
+            },
+            {
+                title: '导航',
+                chilren: [
+                    {
+                        title: '好物优选',
+                        url: 'http://hwyx.91sq.cc/',
+                    }
+                ]
+            },
+        ],
+        catalog: {
+            enable: true,
+            move: true,
+            index: true,
+            level1: 'h2',
+            level2: 'h3',
+            level3: 'h4',
+        },
+        signature: {
+            enable: true,
+            license: '署名-非商业性使用-相同方式共享 4.0 国际',
+            link: 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
+            remark: null
+        },
+        sponsor: {
+            enable: false,
+            paypal: null,
+            wechat: 'https://images.cnblogs.com/cnblogs_com/panlq/1629174/o_200119150653zsm.jpg',
+            alipay: 'https://images.cnblogs.com/cnblogs_com/panlq/1629174/o_200119150701zfb2.jpgh'
+        },
+        github: {
+            enable: true,
+            link: 'https://github.com/Panlq',
+	    target: '_self'
+        }
+    });
+</script><a href="https://github.com/Panlq" class="github-corner" title="Fork me on GitHub" target="_self">
+                        <svg width="60" height="60" viewBox="0 0 250 250" style=" color:#fff; z-index: 999; position: fixed; top: 0; border: 0; left: 0; transform: scale(-1, 1);" aria-hidden="true">
+                            <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+                            <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+                            <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
+                        </svg>
+                    </a><div class="esa-catalog">
+                        <div class="esa-catalog-contents" style="display: block;">
+                            <div class="esa-catalog-title">CONTENTS</div>
+                            <a class="esa-catalog-close">✕</a>
+                        <ul><li class="li_h2" title="Python 内存管理分层架构">
+                            <i class="3160438349"></i><a class="esa-anchor-link"><span class="level1">1. </span>Python 内存管理分层架构</a>
+                        </li><li class="li_h2" title="Python 内存分配策略之-block,pool">
+                            <i class="1937521703"></i><a class="esa-anchor-link"><span class="level1">2. </span>Python 内存分配策略之-block,pool</a>
+                        </li><li class="li_h3" title="block">
+                            <i class="3172803510"></i><a class="esa-anchor-link"><span class="level2">2.1. </span>block</a>
+                        </li><li class="li_h3" title="pool">
+                            <i class="1239231800"></i><a class="esa-anchor-link"><span class="level2">2.2. </span>pool</a>
+                        </li><li class="li_h3" title="pool 初始化">
+                            <i class="1083992624"></i><a class="esa-anchor-link"><span class="level2">2.3. </span>pool 初始化</a>
+                        </li><li class="li_h3" title="pool 进行block分配 - 总体代码">
+                            <i class="3943500122"></i><a class="esa-anchor-link"><span class="level2">2.4. </span>pool 进行block分配 - 总体代码</a>
+                        </li><li class="li_h3" title="pool进行block分配 -1">
+                            <i class="2037329045"></i><a class="esa-anchor-link"><span class="level2">2.5. </span>pool进行block分配 -1</a>
+                        </li><li class="li_h3" title="pool进行block分配 - 2 回收了某几个block">
+                            <i class="611700810"></i><a class="esa-anchor-link"><span class="level2">2.6. </span>pool进行block分配 - 2 回收了某几个block</a>
+                        </li><li class="li_h3" title="pool进行block分配 - 3 pool用完了">
+                            <i class="3899646029"></i><a class="esa-anchor-link"><span class="level2">2.7. </span>pool进行block分配 - 3 pool用完了</a>
+                        </li><li class="li_h2" title="Python 内存分配策略之-arena">
+                            <i class="379391380"></i><a class="esa-anchor-link"><span class="level1">3. </span>Python 内存分配策略之-arena</a>
+                        </li><li class="li_h3" title="arena结构">
+                            <i class="2601202455"></i><a class="esa-anchor-link"><span class="level2">3.1. </span>arena结构</a>
+                        </li><li class="li_h3" title="arena的两种状态">
+                            <i class="3686230403"></i><a class="esa-anchor-link"><span class="level2">3.2. </span>arena的两种状态</a>
+                        </li><li class="li_h3" title="arena 初始化">
+                            <i class="4134553440"></i><a class="esa-anchor-link"><span class="level2">3.3. </span>arena 初始化</a>
+                        </li><li class="li_h3" title="arena分配">
+                            <i class="143591070"></i><a class="esa-anchor-link"><span class="level2">3.4. </span>arena分配</a>
+                        </li><li class="li_h3" title="arena回收">
+                            <i class="1129011443"></i><a class="esa-anchor-link"><span class="level2">3.5. </span>arena回收</a>
+                        </li><li class="li_h3" title="内存分配的步骤">
+                            <i class="305380158"></i><a class="esa-anchor-link"><span class="level2">3.6. </span>内存分配的步骤</a>
+                        </li><li class="li_h2" title="pool在内存池中的三种状态">
+                            <i class="4051088209"></i><a class="esa-anchor-link"><span class="level1">4. </span>pool在内存池中的三种状态</a>
+                        </li><li class="li_h3" title="usedpools">
+                            <i class="53323591"></i><a class="esa-anchor-link"><span class="level2">4.1. </span>usedpools</a>
+                        </li><li class="li_h3" title="内存池全局结构">
+                            <i class="4167947421"></i><a class="esa-anchor-link"><span class="level2">4.2. </span>内存池全局结构</a>
+                        </li></ul></div>
+                    </div><div class="esa-toolbar">
+                <button class="esa-toolbar-gotop" data-tips="返回顶部"></button>
+                <button class="esa-toolbar-contents" data-tips="阅读目录"></button>
+                <button class="esa-toolbar-follow" data-tips="关注博主"></button>
+            </div><script type="text/javascript">getFollowStatus('fb7898b6-c71b-e511-b908-9dcfd8948a71');</script><div id="lightboxOverlay" tabindex="-1" class="lightboxOverlay" style="display: none;"></div><div id="lightbox" tabindex="-1" class="lightbox" style="display: none;"><div class="lb-outerContainer"><div class="lb-container"><img class="lb-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" alt=""><div class="lb-nav"><a class="lb-prev" aria-label="Previous image" href="https://www.cnblogs.com/panlq/p/13056907.html"></a><a class="lb-next" aria-label="Next image" href="https://www.cnblogs.com/panlq/p/13056907.html"></a></div><div class="lb-loader"><a class="lb-cancel"></a></div></div></div><div class="lb-dataContainer"><div class="lb-data"><div class="lb-details"><span class="lb-caption"></span><span class="lb-number"></span></div><div class="lb-closeContainer"><a class="lb-close"></a></div></div></div></div><iframe id="google_osd_static_frame_1179625907543" name="google_osd_static_frame" style="display: none; width: 0px; height: 0px;" src="./Python3 源码阅读 - 内存管理机制_files/saved_resource(2).html"></iframe><iframe src="./Python3 源码阅读 - 内存管理机制_files/aframe.html" width="0" height="0" style="display: none;"></iframe></body></html>

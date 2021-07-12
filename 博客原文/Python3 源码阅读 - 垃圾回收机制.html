@@ -1,0 +1,2378 @@
+<!DOCTYPE html>
+<!-- saved from url=(0045)https://www.cnblogs.com/panlq/p/13096942.html -->
+<html lang="zh-cn"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="never">
+    <meta name="description" content="Python的垃圾回收机制包括了两大部分： 引用计数(大部分在 Include/object.h 中定义) 标记清除+隔代回收(大部分在 Modules/gcmodule.c 中定义) 1. 引用计数">
+    <meta property="og:description" content="Python的垃圾回收机制包括了两大部分： 引用计数(大部分在 Include/object.h 中定义) 标记清除+隔代回收(大部分在 Modules/gcmodule.c 中定义) 1. 引用计数">
+    <meta http-equiv="Cache-Control" content="no-transform">
+    <meta http-equiv="Cache-Control" content="no-siteapp">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Python3 源码阅读 - 垃圾回收机制 - JonPan - 博客园</title>
+    <link id="favicon" rel="shortcut icon" href="https://common.cnblogs.com/favicon.svg" type="image/svg+xml">
+    
+    <link rel="stylesheet" href="./Python3 源码阅读 - 垃圾回收机制_files/blog-common.min.css">
+    <link id="MainCss" rel="stylesheet" href="./Python3 源码阅读 - 垃圾回收机制_files/bundle-custom.min.css">
+    <link type="text/css" rel="stylesheet" href="./Python3 源码阅读 - 垃圾回收机制_files/custom.css">
+    <link id="mobile-style" media="only screen and (max-width: 767px)" type="text/css" rel="stylesheet" href="./Python3 源码阅读 - 垃圾回收机制_files/bundle-custom-mobile.min.css">
+    
+    <link type="application/rss+xml" rel="alternate" href="https://www.cnblogs.com/panlq/rss">
+    <link type="application/rsd+xml" rel="EditURI" href="https://www.cnblogs.com/panlq/rsd.xml">
+    <link type="application/wlwmanifest+xml" rel="wlwmanifest" href="https://www.cnblogs.com/panlq/wlwmanifest.xml">
+    <script src="./Python3 源码阅读 - 垃圾回收机制_files/osd.js.下载"></script><script async="" src="./Python3 源码阅读 - 垃圾回收机制_files/analytics.js.下载"></script><script>
+        var currentBlogId = 416394;
+        var currentBlogApp = 'panlq';
+        var cb_enable_mathjax = true;
+        var isLogined = false;
+        var isBlogOwner = false;
+        var skinName = 'Custom';
+        var visitorUserId = '';
+    </script>
+        <script>
+            var currentPostDateAdded = '2020-06-12 12:01';
+        </script>
+    <script src="./Python3 源码阅读 - 垃圾回收机制_files/jquery-2.2.0.min.js.下载"></script>
+    <script src="./Python3 源码阅读 - 垃圾回收机制_files/blog-common.min.js.下载"></script><style type="text/css">.medium-zoom-overlay{position:fixed;top:0;right:0;bottom:0;left:0;opacity:0;transition:opacity .3s;will-change:opacity}.medium-zoom--opened .medium-zoom-overlay{cursor:pointer;cursor:zoom-out;opacity:1}.medium-zoom-image{cursor:pointer;cursor:zoom-in;transition:transform .3s cubic-bezier(.2,0,.2,1)!important}.medium-zoom-image--hidden{visibility:hidden}.medium-zoom-image--opened{position:relative;cursor:pointer;cursor:zoom-out;will-change:transform}</style>
+    <script type="text/x-mathjax-config;executed=true">
+        MathJax.Hub.Config({
+        tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']], processClass: 'math', processEscapes: true },
+        TeX: {
+        equationNumbers: { autoNumber: ['AMS'], useLabelIds: true },
+        extensions: ['extpfeil.js', 'mediawiki-texvc.js'],
+        Macros: {bm: "\\boldsymbol"}
+        },
+        'HTML-CSS': { linebreaks: { automatic: true } },
+        SVG: { linebreaks: { automatic: true } }
+        });
+    </script>
+    <script src="./Python3 源码阅读 - 垃圾回收机制_files/MathJax.js.下载"></script>
+    
+<style type="text/css">.MathJax_Hover_Frame {border-radius: .25em; -webkit-border-radius: .25em; -moz-border-radius: .25em; -khtml-border-radius: .25em; box-shadow: 0px 0px 15px #83A; -webkit-box-shadow: 0px 0px 15px #83A; -moz-box-shadow: 0px 0px 15px #83A; -khtml-box-shadow: 0px 0px 15px #83A; border: 1px solid #A6D ! important; display: inline-block; position: absolute}
+.MathJax_Menu_Button .MathJax_Hover_Arrow {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; -khtml-border-radius: 4px; font-family: 'Courier New',Courier; font-size: 9px; color: #F0F0F0}
+.MathJax_Menu_Button .MathJax_Hover_Arrow span {display: block; background-color: #AAA; border: 1px solid; border-radius: 3px; line-height: 0; padding: 4px}
+.MathJax_Hover_Arrow:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_Hover_Arrow:hover span {background-color: #CCC!important}
+</style><style type="text/css">#MathJax_About {position: fixed; left: 50%; width: auto; text-align: center; border: 3px outset; padding: 1em 2em; background-color: #DDDDDD; color: black; cursor: default; font-family: message-box; font-size: 120%; font-style: normal; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 15px; -webkit-border-radius: 15px; -moz-border-radius: 15px; -khtml-border-radius: 15px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_About.MathJax_MousePost {outline: none}
+.MathJax_Menu {position: absolute; background-color: white; color: black; width: auto; padding: 2px; border: 1px solid #CCCCCC; margin: 0; cursor: default; font: menu; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+.MathJax_MenuItem {padding: 2px 2em; background: transparent}
+.MathJax_MenuArrow {position: absolute; right: .5em; padding-top: .25em; color: #666666; font-size: .75em}
+.MathJax_MenuActive .MathJax_MenuArrow {color: white}
+.MathJax_MenuArrow.RTL {left: .5em; right: auto}
+.MathJax_MenuCheck {position: absolute; left: .7em}
+.MathJax_MenuCheck.RTL {right: .7em; left: auto}
+.MathJax_MenuRadioCheck {position: absolute; left: 1em}
+.MathJax_MenuRadioCheck.RTL {right: 1em; left: auto}
+.MathJax_MenuLabel {padding: 2px 2em 4px 1.33em; font-style: italic}
+.MathJax_MenuRule {border-top: 1px solid #CCCCCC; margin: 4px 1px 0px}
+.MathJax_MenuDisabled {color: GrayText}
+.MathJax_MenuActive {background-color: Highlight; color: HighlightText}
+.MathJax_MenuDisabled:focus, .MathJax_MenuLabel:focus {background-color: #E8E8E8}
+.MathJax_ContextMenu:focus {outline: none}
+.MathJax_ContextMenu .MathJax_MenuItem:focus {outline: none}
+#MathJax_AboutClose {top: .2em; right: .2em}
+.MathJax_Menu .MathJax_MenuClose {top: -10px; left: -10px}
+.MathJax_MenuClose {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; font-family: 'Courier New',Courier; font-size: 24px; color: #F0F0F0}
+.MathJax_MenuClose span {display: block; background-color: #AAA; border: 1.5px solid; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; line-height: 0; padding: 8px 0 6px}
+.MathJax_MenuClose:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_MenuClose:hover span {background-color: #CCC!important}
+.MathJax_MenuClose:hover:focus {outline: none}
+</style><style type="text/css">.MathJax_Preview .MJXf-math {color: inherit!important}
+</style><style type="text/css">.MJX_Assistive_MathML {position: absolute!important; top: 0; left: 0; clip: rect(1px, 1px, 1px, 1px); padding: 1px 0 0 0!important; border: 0!important; height: 1px!important; width: 1px!important; overflow: hidden!important; display: block!important; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none}
+.MJX_Assistive_MathML.MJX_Assistive_MathML_Block {width: 100%!important}
+</style><style type="text/css">#MathJax_Zoom {position: absolute; background-color: #F0F0F0; overflow: auto; display: block; z-index: 301; padding: .5em; border: 1px solid black; margin: 0; font-weight: normal; font-style: normal; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; -webkit-box-sizing: content-box; -moz-box-sizing: content-box; box-sizing: content-box; box-shadow: 5px 5px 15px #AAAAAA; -webkit-box-shadow: 5px 5px 15px #AAAAAA; -moz-box-shadow: 5px 5px 15px #AAAAAA; -khtml-box-shadow: 5px 5px 15px #AAAAAA; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_ZoomOverlay {position: absolute; left: 0; top: 0; z-index: 300; display: inline-block; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+#MathJax_ZoomFrame {position: relative; display: inline-block; height: 0; width: 0}
+#MathJax_ZoomEventTrap {position: absolute; left: 0; top: 0; z-index: 302; display: inline-block; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+</style><style type="text/css">.MathJax_Preview {color: #888}
+#MathJax_Message {position: fixed; left: 1em; bottom: 1.5em; background-color: #E6E6E6; border: 1px solid #959595; margin: 0px; padding: 2px 8px; z-index: 102; color: black; font-size: 80%; width: auto; white-space: nowrap}
+#MathJax_MSIE_Frame {position: absolute; top: 0; left: 0; width: 0px; z-index: 101; border: 0px; margin: 0px; padding: 0px}
+.MathJax_Error {color: #CC0000; font-style: italic}
+</style><style type="text/css">.MJXp-script {font-size: .8em}
+.MJXp-right {-webkit-transform-origin: right; -moz-transform-origin: right; -ms-transform-origin: right; -o-transform-origin: right; transform-origin: right}
+.MJXp-bold {font-weight: bold}
+.MJXp-italic {font-style: italic}
+.MJXp-scr {font-family: MathJax_Script,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-frak {font-family: MathJax_Fraktur,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-sf {font-family: MathJax_SansSerif,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-cal {font-family: MathJax_Caligraphic,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-mono {font-family: MathJax_Typewriter,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-largeop {font-size: 150%}
+.MJXp-largeop.MJXp-int {vertical-align: -.2em}
+.MJXp-math {display: inline-block; line-height: 1.2; text-indent: 0; font-family: 'Times New Roman',Times,STIXGeneral,serif; white-space: nowrap; border-collapse: collapse}
+.MJXp-display {display: block; text-align: center; margin: 1em 0}
+.MJXp-math span {display: inline-block}
+.MJXp-box {display: block!important; text-align: center}
+.MJXp-box:after {content: " "}
+.MJXp-rule {display: block!important; margin-top: .1em}
+.MJXp-char {display: block!important}
+.MJXp-mo {margin: 0 .15em}
+.MJXp-mfrac {margin: 0 .125em; vertical-align: .25em}
+.MJXp-denom {display: inline-table!important; width: 100%}
+.MJXp-denom > * {display: table-row!important}
+.MJXp-surd {vertical-align: top}
+.MJXp-surd > * {display: block!important}
+.MJXp-script-box > *  {display: table!important; height: 50%}
+.MJXp-script-box > * > * {display: table-cell!important; vertical-align: top}
+.MJXp-script-box > *:last-child > * {vertical-align: bottom}
+.MJXp-script-box > * > * > * {display: block!important}
+.MJXp-mphantom {visibility: hidden}
+.MJXp-munderover, .MJXp-munder {display: inline-table!important}
+.MJXp-over {display: inline-block!important; text-align: center}
+.MJXp-over > * {display: block!important}
+.MJXp-munderover > *, .MJXp-munder > * {display: table-row!important}
+.MJXp-mtable {vertical-align: .25em; margin: 0 .125em}
+.MJXp-mtable > * {display: inline-table!important; vertical-align: middle}
+.MJXp-mtr {display: table-row!important}
+.MJXp-mtd {display: table-cell!important; text-align: center; padding: .5em 0 0 .5em}
+.MJXp-mtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-mlabeledtr {display: table-row!important}
+.MJXp-mlabeledtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mlabeledtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-merror {background-color: #FFFF88; color: #CC0000; border: 1px solid #CC0000; padding: 1px 3px; font-style: normal; font-size: 90%}
+.MJXp-scale0 {-webkit-transform: scaleX(.0); -moz-transform: scaleX(.0); -ms-transform: scaleX(.0); -o-transform: scaleX(.0); transform: scaleX(.0)}
+.MJXp-scale1 {-webkit-transform: scaleX(.1); -moz-transform: scaleX(.1); -ms-transform: scaleX(.1); -o-transform: scaleX(.1); transform: scaleX(.1)}
+.MJXp-scale2 {-webkit-transform: scaleX(.2); -moz-transform: scaleX(.2); -ms-transform: scaleX(.2); -o-transform: scaleX(.2); transform: scaleX(.2)}
+.MJXp-scale3 {-webkit-transform: scaleX(.3); -moz-transform: scaleX(.3); -ms-transform: scaleX(.3); -o-transform: scaleX(.3); transform: scaleX(.3)}
+.MJXp-scale4 {-webkit-transform: scaleX(.4); -moz-transform: scaleX(.4); -ms-transform: scaleX(.4); -o-transform: scaleX(.4); transform: scaleX(.4)}
+.MJXp-scale5 {-webkit-transform: scaleX(.5); -moz-transform: scaleX(.5); -ms-transform: scaleX(.5); -o-transform: scaleX(.5); transform: scaleX(.5)}
+.MJXp-scale6 {-webkit-transform: scaleX(.6); -moz-transform: scaleX(.6); -ms-transform: scaleX(.6); -o-transform: scaleX(.6); transform: scaleX(.6)}
+.MJXp-scale7 {-webkit-transform: scaleX(.7); -moz-transform: scaleX(.7); -ms-transform: scaleX(.7); -o-transform: scaleX(.7); transform: scaleX(.7)}
+.MJXp-scale8 {-webkit-transform: scaleX(.8); -moz-transform: scaleX(.8); -ms-transform: scaleX(.8); -o-transform: scaleX(.8); transform: scaleX(.8)}
+.MJXp-scale9 {-webkit-transform: scaleX(.9); -moz-transform: scaleX(.9); -ms-transform: scaleX(.9); -o-transform: scaleX(.9); transform: scaleX(.9)}
+.MathJax_PHTML .noError {vertical-align: ; font-size: 90%; text-align: left; color: black; padding: 1px 3px; border: 1px solid}
+</style><meta http-equiv="origin-trial" content="A+b/H0b8RPXNaJgaNFpO0YOFuGK6myDQXlwnJB3SwzvNMfcndat4DZYMrP4ClJIzYWo3/yP2S+8FTZ/lpqbPAAEAAABueyJvcmlnaW4iOiJodHRwczovL2ltYXNkay5nb29nbGVhcGlzLmNvbTo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzVGhpcmRQYXJ0eSI6dHJ1ZX0="><meta http-equiv="origin-trial" content="A9ZgbRtm4pU3oZiuNzOsKcC8ppFSZdcjP2qYcdQrFKVzkmiWH1kdYY1Mi9x7G8+PS8HV9Ha9Cz0gaMdKsiVZIgMAAAB7eyJvcmlnaW4iOiJodHRwczovL2RvdWJsZWNsaWNrLm5ldDo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AxL6oBxcpn5rQDPKSAs+d0oxNyJYq2/4esBUh3Yx5z8QfcLu+AU8iFCXYRcr/CEEfDnkxxLTsvXPJFQBxHfvkgMAAACBeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXRhZ3NlcnZpY2VzLmNvbTo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="A9KPtG5kl3oLTk21xqynDPGQ5t18bSOpwt0w6kGa6dEWbuwjpffmdUpR3W+faZDubGT+KIk2do0BX2ca16x8qAcAAACBeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXN5bmRpY2F0aW9uLmNvbTo0NDMiLCJmZWF0dXJlIjoiVHJ1c3RUb2tlbnMiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="A3HucHUo1oW9s+9kIKz8mLkbcmdaj5lxt3eiIMp1Nh49dkkBlg1Fhg4Fd/r0vL69mRRA36YutI9P/lJUfL8csQoAAACFeyJvcmlnaW4iOiJodHRwczovL2RvdWJsZWNsaWNrLm5ldDo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1N1YmRvbWFpbiI6dHJ1ZSwiaXNUaGlyZFBhcnR5Ijp0cnVlfQ=="><meta http-equiv="origin-trial" content="A0OysezhLoCRYomumeYlubLurZTCmsjTb087OvtCy95jNM65cfEsbajrJnhaGwiTxhz38ZZbm+UhUwQuXfVPTg0AAACLeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXN5bmRpY2F0aW9uLmNvbTo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1N1YmRvbWFpbiI6dHJ1ZSwiaXNUaGlyZFBhcnR5Ijp0cnVlfQ=="><meta http-equiv="origin-trial" content="AxoOxdZQmIoA1WeAPDixRAeWDdgs7ZtVFfH2y19ziTgD1iaHE5ZGz2UdSjubkWvob9C5PrjUfkWi4ZSLgWk3Xg8AAACLeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXRhZ3NlcnZpY2VzLmNvbTo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1N1YmRvbWFpbiI6dHJ1ZSwiaXNUaGlyZFBhcnR5Ijp0cnVlfQ=="><meta http-equiv="origin-trial" content="A7+rMYR5onPnACrz+niKSeFdH3xw1IyHo2AZSHmxrofRk9w4HcQPMYcpBUKu6OQ6zsdxf4m/vqa6tG6Na4OLpAQAAAB4eyJvcmlnaW4iOiJodHRwczovL2ltYXNkay5nb29nbGVhcGlzLmNvbTo0NDMiLCJmZWF0dXJlIjoiQ29udmVyc2lvbk1lYXN1cmVtZW50IiwiZXhwaXJ5IjoxNjI2MjIwNzk5LCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AwfG8hAcHnPa/kJ1Co0EvG/K0F9l1s2JZGiDLt2mhC3QI5Fh4qmsmSwrWObZFbRC9ieDaSLU6lHRxhGUF/i9sgoAAACBeyJvcmlnaW4iOiJodHRwczovL2RvdWJsZWNsaWNrLm5ldDo0NDMiLCJmZWF0dXJlIjoiSW50ZXJlc3RDb2hvcnRBUEkiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AwQ7dCmHkvR6FuOFxAuNnktYSQrGbL4dF+eBkrwNLALc69Wr//PnO1yzns3pjUoCaYbKHtVcnng2hU+8OUm0PAYAAACHeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXN5bmRpY2F0aW9uLmNvbTo0NDMiLCJmZWF0dXJlIjoiSW50ZXJlc3RDb2hvcnRBUEkiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><meta http-equiv="origin-trial" content="AysVDPGQTLD/Scn78x4mLwB1tMfje5jwUpAAzGRpWsr1NzoN7MTFhT3ClmImi2svDZA7V6nWGIV8YTPsSRTe0wYAAACHeyJvcmlnaW4iOiJodHRwczovL2dvb2dsZXRhZ3NlcnZpY2VzLmNvbTo0NDMiLCJmZWF0dXJlIjoiSW50ZXJlc3RDb2hvcnRBUEkiLCJleHBpcnkiOjE2MjYyMjA3OTksImlzU3ViZG9tYWluIjp0cnVlLCJpc1RoaXJkUGFydHkiOnRydWV9"><script src="./Python3 源码阅读 - 垃圾回收机制_files/pubads_impl_2021060301.js.下载" async=""></script><link rel="preload" href="./Python3 源码阅读 - 垃圾回收机制_files/f.txt" as="script"><script type="text/javascript" src="./Python3 源码阅读 - 垃圾回收机制_files/f.txt"></script><link rel="prefetch" href="https://0d413cd471ab87e5739dd39e27a27200.safeframe.googlesyndication.com/safeframe/1-0-38/html/container.html"><link rel="shortcut icon" href="https://images.cnblogs.com/cnblogs_com/panlq/1629174/o_200119145814favicon.png" type="image/x-icon"><link rel="stylesheet" href="./Python3 源码阅读 - 垃圾回收机制_files/lightbox.min.css"></head>
+<body class="no-navbar"><div class="esa-mobile-menu"></div><div id="MathJax_Message" style="display: none;"></div>
+    <a name="top"></a>
+        <div id="bannerbar" class="bannerbar-mobile formobile">
+            <a href="https://www.aliyun.com/minisite/goods?userCode=swh7dvlt" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;aliyun-cps-blog-bannerbar-mobile&#39;)">
+                <img src="./Python3 源码阅读 - 垃圾回收机制_files/35695-20210428213541700-642740375.jpg" alt="">
+            </a>
+        </div>
+    <div id="top_nav" class="navbar forpc navbar-custom">
+        <nav id="nav_main" class="navbar-main">
+            <ul id="nav_left" class="navbar-list navbar-left">
+                <li class="navbar-branding"><a href="https://www.cnblogs.com/" title="开发者的网上家园"><img src="./Python3 源码阅读 - 垃圾回收机制_files/logo.svg" alt="博客园Logo"></a></li>
+                <li><a href="https://www.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-sitehome&#39;)">首页</a></li>
+                <li><a href="https://news.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-news&#39;)">新闻</a></li>
+                <li><a href="https://q.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-q&#39;)">博问</a></li>
+                <li><a id="nav_brandzone" href="https://brands.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-brands&#39;)">专区</a></li>
+                <li><a href="https://ing.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-ing&#39;)">闪存</a></li>
+                <li><a href="https://edu.cnblogs.com/" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;skin-navbar-edu&#39;)">班级</a></li>
+            </ul>
+            <ul id="nav_right" class="navbar-list navbar-right">
+                <li>
+                    <form id="zzk_search" class="navbar-search" action="https://zzk.cnblogs.com/s" method="get">
+                        <input name="w" id="zzk_search_input" placeholder="代码改变世界" type="text" tabindex="3">
+                        <button type="submit" id="zzk_search_button">
+                            <img src="./Python3 源码阅读 - 垃圾回收机制_files/search.svg" alt="搜索">
+                        </button>
+                    </form>
+                </li>
+                <li id="navbar_login_status" class="navbar-list">
+                    <a class="navbar-user-info navbar-blog" href="https://i.cnblogs.com/EditPosts.aspx?opt=1" alt="写随笔" title="写随笔" style="display: none;">
+                        <img id="new_post_icon" class="navbar-icon" src="./Python3 源码阅读 - 垃圾回收机制_files/newpost.svg" alt="写随笔">
+                    </a>
+                    <a id="navblog-myblog-icon" class="navbar-user-info navbar-blog" href="https://passport.cnblogs.com/GetBlogApplyStatus.aspx" alt="我的博客" title="我的博客" style="display: none;">
+                        <img id="myblog_icon" class="navbar-icon" src="./Python3 源码阅读 - 垃圾回收机制_files/myblog.svg" alt="我的博客">
+                    </a>
+                    <a class="navbar-user-info navbar-message navbar-icon-wrapper" href="https://msg.cnblogs.com/" alt="短消息" title="短消息" style="display: none;">
+                        <img id="msg_icon" class="navbar-icon" src="./Python3 源码阅读 - 垃圾回收机制_files/message.svg" alt="短消息">
+                        <span id="msg_count" style="display: none"></span>
+                    </a>
+                    <div id="user_info" class="navbar-user-info dropdown" style="display: none;">
+                        <a class="dropdown-button" href="https://home.cnblogs.com/">
+                            <img id="user_icon" class="navbar-avatar" src="./Python3 源码阅读 - 垃圾回收机制_files/avatar-default.svg" alt="用户头像">
+                        </a>
+                        <div class="dropdown-menu">
+                            <a id="navblog-myblog-text" href="https://passport.cnblogs.com/GetBlogApplyStatus.aspx">我的博客</a>
+                            <a href="https://home.cnblogs.com/">我的园子</a>
+                            <a href="https://account.cnblogs.com/settings/account">账号设置</a>
+                            <a href="javascript:void(0)" id="navbar_lite_mode_toggle" title="简洁模式会使用简洁款皮肤显示所有博客">
+    简洁模式 <img id="navbar_lite_mode_on" src="./Python3 源码阅读 - 垃圾回收机制_files/lite-mode-check.svg" class="hide"><span id="navbar_lite_mode_spinner" class="hide">...</span>
+</a>
+                            <a href="javascript:void(0)" onclick="account.logout();">退出登录</a>
+                        </div>
+                    </div>
+                    <a class="navbar-anonymous" href="https://account.cnblogs.com/signup/" style="display: inline;">注册</a>
+                    <a class="navbar-anonymous" href="javascript:void(0);" onclick="account.login()" style="display: inline;">登录</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <div id="page_begin_html">
+        
+
+
+    </div>
+    <!--done-->
+<div id="home">
+<div id="header">
+	<div id="blogTitle">
+        <a id="lnkBlogLogo" href="https://www.cnblogs.com/panlq/"><img id="blogLogo" src="./Python3 源码阅读 - 垃圾回收机制_files/logo.gif" alt="返回主页"></a>		
+		
+<!--done-->
+<h1><a id="Header1_HeaderTitle" class="headermaintitle HeaderMainTitle" href="https://www.cnblogs.com/panlq/">JonPan</a>
+</h1>
+<h2></h2>
+
+
+
+
+		
+	</div><!--end: blogTitle 博客的标题和副标题 -->
+	<div id="navigator">
+		
+<ul id="navList">
+<li><a id="blog_nav_sitehome" class="menu" href="https://www.cnblogs.com/">
+博客园</a>
+<i></i></li>
+<li>
+<a id="blog_nav_myhome" class="menu" href="https://www.cnblogs.com/panlq/">
+首页</a>
+<i></i></li><li><a class="menu" href="https://www.cnblogs.com/panlq/tag/">标签</a><i></i></li><li><a class="menu" href="https://www.cnblogs.com/panlq/p/">归档</a><i></i></li><li><a class="menu" href="https://www.cnblogs.com/panlq/category/1486847.html">每日一题</a><i></i></li>
+                            <li class="esa-has-subnavs">
+                                <a class="menu" href="javascript:void(0);">导航
+                                    <svg class="arrow" width="12px" height="8px" viewBox="0 0 14 8" xml:space="preserve" fill="none" stroke="rgb(49, 70, 89)"><path d="M1,1l6.2,6L13,1"></path></svg>
+                                </a>
+                                <ul class="esa-sub-navs"><li><a class="menu" href="http://hwyx.91sq.cc/" target="_blank">好物优选</a></li></ul>
+                            <i></i></li>
+<li>
+
+
+<i></i></li>
+<li>
+<i></i></li>
+<li>
+
+<!--<partial name="./Shared/_XmlLink.cshtml" model="Model" /></li>--><i></i></li>
+<li>
+<a id="blog_nav_admin" class="menu" href="https://i.cnblogs.com/">
+管理</a>
+<i></i></li>
+</ul>
+
+
+		<div class="blogStats">
+			<span id="stats_post_count">随笔 - 33&nbsp; </span>
+<span id="stats_article_count">文章 - 20&nbsp; </span>
+<span id="stats-comment_count">评论 - 20&nbsp; </span>
+<span id="stats-total-view-count">阅读 - 
+<span title="总阅读数: 178564">
+17万</span></span>
+
+		</div><!--end: blogStats -->
+	
+                <svg t="1573264861612" class="icon esa-search-btn" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="7386" width="32" height="32" data-spm-anchor-id="a313x.7781069.0.i8">
+                    <path fill="rgb(49, 70, 89)" d="M616.362667 580.608h-23.808l-8.533334-8.128a196.16 196.16 0 1 0-21.098666 21.098667l8.128 8.533333v23.808l150.805333 150.165333 44.8-44.8z m-180.8 0a135.594667 135.594667 0 1 1 135.594666-135.594667 135.402667 135.402667 0 0 1-135.573333 135.594667z" p-id="7387"></path>
+                </svg>
+                <svg t="1573265135257" class="icon esa-search-close" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="15367" width="32" height="32">
+                    <path fill="rgb(49, 70, 89)" d="M515.23600182 491.06853843L378.27564815 354.10818478a17.09155825 17.09155825 0 1 0-24.17885764 24.15606913l136.96035332 136.97174792-136.96035331 136.97174789a17.09155825 17.09155825 0 1 0 24.16746339 24.16746337l136.97174791-136.96035366 136.9717479 136.96035366a17.09155825 17.09155825 0 1 0 24.16746337-24.15606912l-136.96035366-136.98314215 136.96035366-136.96035367a17.09155825 17.09155825 0 1 0-24.16746337-24.16746337l-136.96035366 136.96035364z" p-id="15368"></path>
+                </svg></div><!--end: navigator 博客导航栏 -->
+
+                <div class="esa-search-box">
+                    <div class="div_my_zzk">
+                        <input type="text" id="q" onkeydown="return zzk_go_enter(event);" class="input_my_zzk" placeholder="Type to Search">&nbsp;<input onclick="zzk_go()" type="button" value="搜 索" id="btnZzk" class="btn_my_zzk">
+                    </div>
+                </div></div><!--end: header 头部 -->
+<div id="main">
+	<div id="mainContent">
+	<div class="forFlow">
+		<div id="post_detail">
+    <!--done-->
+    <div id="topics">
+        <div class="post">
+            <h1 class="postTitle">
+                
+<a id="cb_post_title_url" class="postTitle2 vertical-middle" href="https://www.cnblogs.com/panlq/p/13096942.html">
+    <span>Python3 源码阅读 - 垃圾回收机制</span>
+    
+
+
+
+</a>
+
+            </h1>
+            <div class="clear"></div>
+            <div class="postBody">
+                <div id="cnblogs_post_body" class="blogpost-body cnblogs-markdown">
+<p>Python的垃圾回收机制包括了两大部分：</p>
+<ul>
+<li><strong>引用计数</strong>(大部分在 <code>Include/object.h</code> 中定义)</li>
+<li><strong>标记清除+隔代回收</strong>(大部分在 <code>Modules/gcmodule.c</code> 中定义)</li>
+</ul>
+<h2 id="1669893080">1. 引用计数机制<a href="https://www.cnblogs.com/panlq/p/13096942.html#1669893080" class="esa-anchor">#</a></h2>
+<p>python中万物皆对象，他的核心结构是：<code>PyObject</code></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_0">Copy</div><code class="language-c++ hljs" id="copy_target_0"><span class="hljs-keyword">typedef</span> __int64 <span class="hljs-keyword">ssize_t</span>;
+
+<span class="hljs-keyword">typedef</span> <span class="hljs-keyword">ssize_t</span>         Py_ssize_t;
+
+<span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> _<span class="hljs-title">object</span> {</span>
+    _PyObject_HEAD_EXTRA
+    Py_ssize_t ob_refcnt;   <span class="hljs-comment">// Py_ssize_t __int64</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> _<span class="hljs-title">typeobject</span> *<span class="hljs-title">ob_type</span>;</span>
+} PyObject;
+
+<span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> {</span>
+    PyObject ob_base;
+    Py_ssize_t ob_size; <span class="hljs-comment">/* Number of items in variable part */</span>
+} PyVarObject;
+</code></pre>
+<p><code>PyObject</code>是每个对象的底层数据结构，其中<code>ob_refcnt</code>就是作为引用计数。当一个对象有新的引用时, 它的<code>ob_refcnt</code>就会增加，当引用它的对象被删除，它的<code>ob_refcnt</code>就会减少,当引用技术为0时，该对象的生命结束了。</p>
+<ol>
+<li>引用计数+1的情况
+<ul>
+<li>对象被创建 eg: a=2</li>
+<li>对象被引用 eg: b=a</li>
+<li>对象被作为参数，传入到一个函数中，例如func(a)</li>
+<li>对象作为一个元素，存储在容器中，例如list1=[a, b]</li>
+</ul>
+</li>
+<li>引用计数-1的情况
+<ul>
+<li>对象的别名被显示的销毁 eg: del a</li>
+<li>对象的别名被赋予新的对象  eg: a=34</li>
+<li>一个对象离开它的作用域， 例如f函数执行完毕时，func函数中的局部变量（全局变量不会）</li>
+<li>对象所在的容器被销毁，或者从容器中删除</li>
+</ul>
+</li>
+</ol>
+<p><strong>如何查看对象的引用计数</strong></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_1">Copy</div><code class="language-python hljs" id="copy_target_1"><span class="hljs-keyword">import</span> sys
+a = <span class="hljs-string">'hello'</span>
+sys.getrefcount(a)   
+// 注意: getrefcount(a) 传入a时, a的引用计数会加<span class="hljs-number">1</span>
+</code></pre>
+<h3 id="264860042">1.1 什么时候触发回收<a href="https://www.cnblogs.com/panlq/p/13096942.html#264860042" class="esa-anchor">#</a></h3>
+<p>当一个对象的引用计数变为了 0, 会直接进入释放空间的流程</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_2">Copy</div><code class="language-c++ hljs" id="copy_target_2"><span class="hljs-comment">/* cpython/Include/object.h */</span>
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">inline</span> <span class="hljs-keyword">void</span> _Py_DECREF(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *filename, <span class="hljs-keyword">int</span> lineno,
+                              PyObject *op)
+{
+    _Py_DEC_REFTOTAL;
+    <span class="hljs-keyword">if</span> (--op-&gt;ob_refcnt != <span class="hljs-number">0</span>) {
+<span class="hljs-meta">#<span class="hljs-meta-keyword">ifdef</span> Py_REF_DEBUG</span>
+        <span class="hljs-keyword">if</span> (op-&gt;ob_refcnt &lt; <span class="hljs-number">0</span>) {
+            _Py_NegativeRefcount(filename, lineno, op);
+        }
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+    }
+    <span class="hljs-keyword">else</span> {
+    	<span class="hljs-comment">/* // _Py_Dealloc 会找到对应类型的 descructor, 并且调用这个 descructor
+        destructor dealloc = Py_TYPE(op)-&gt;tp_dealloc;
+        (*dealloc)(op);
+        */</span>
+        _Py_Dealloc(op);
+    }
+}
+</code></pre>
+<h2 id="2318339259">2. 常驻内存对象<a href="https://www.cnblogs.com/panlq/p/13096942.html#2318339259" class="esa-anchor">#</a></h2>
+<p>引用计数机制所带来的维护引用计数的额外操作，与python运行中所进行的内存分配、释放、引用赋值的次数是成正比的，这一点，相对于主流的垃圾回收技术，比如标记--清除<code>(mark--sweep)</code>、停止--复制<code>(stop--copy)</code>等方法相比是一个弱点，因为它们带来额外操作只和内存数量有关，至于多少人引用了这块内存则不关心。因此为了与引用计数搭配、在内存的分配和释放上获得最高的效率，python设计了大量的内存池机制，比如<strong>小整数对象池、字符串的intern机制，列表的freelist缓冲池</strong>等等，这些大量使用的面向特定对象的内存池机制正是为了弥补引用计数的软肋。</p>
+<h3 id="531550804">2.1 小整数对象池<a href="https://www.cnblogs.com/panlq/p/13096942.html#531550804" class="esa-anchor">#</a></h3>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_3">Copy</div><code class="language-c++ hljs" id="copy_target_3"><span class="hljs-meta">#<span class="hljs-meta-keyword">ifndef</span> NSMALLPOSINTS</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> NSMALLPOSINTS           257</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">ifndef</span> NSMALLNEGINTS</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> NSMALLNEGINTS           5</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+
+<span class="hljs-meta">#<span class="hljs-meta-keyword">if</span> NSMALLNEGINTS + NSMALLPOSINTS &gt; 0</span>
+<span class="hljs-comment">/* Small integers are preallocated in this array so that they
+   can be shared.
+   The integers that are preallocated are those in the range
+   -NSMALLNEGINTS (inclusive) to NSMALLPOSINTS (not inclusive).
+*/</span>
+<span class="hljs-keyword">static</span> PyLongObject small_ints[NSMALLNEGINTS + NSMALLPOSINTS];
+
+Py_INCREF(op)  增加对象引用计数
+
+Py_DECREF(op)  减少对象引用计数, 如果计数位<span class="hljs-number">0</span>, 调用_Py_Dealloc
+
+_Py_Dealloc(op) 调用对应类型的 tp_dealloc 方法
+</code></pre>
+<p>小整数对象池就是一个<code>PyLongObject</code> 数组, 大小=257+5=262, 范围是<code>[-5, 257)</code> 注意左闭右开.</p>
+<blockquote>
+<p>python对小整数的定义是[-5, 257)， 这些整数对象是提前建立好的，不会被垃圾回收，在一个python程序中，所有位于这个范围内的整数使用的都是同一个对象</p>
+</blockquote>
+<h3 id="2288374481">2.2 大整数对象池<a href="https://www.cnblogs.com/panlq/p/13096942.html#2288374481" class="esa-anchor">#</a></h3>
+<p>疑惑：《Python源码剖析》提到的整数对象池block_list应该已经不存在了（因为PyLongObject为变长对象）。<code>Python2</code>中的<code>PyIntObject</code>实际是对<code>c</code>中的<code>long</code>的包装。所以<code>Python2</code>也提供了专门的缓存池，供大整数轮流使用，避免每次使用不断的<code>malloc</code>分配内存带来的效率损耗，可参考<a href="https://foofish.net/python_int_implement.html" target="_blank">刘志军老师的讲解</a>。既然没有池了，malloc/free会带来的不小性能损耗。Guido认为Py3.0有极大的优化空间，在字符串和整形操作上可以取得很好的优化结果。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_4">Copy</div><code class="language-c hljs" id="copy_target_4"><span class="hljs-comment">/* Allocate a new int object with size digits.
+   Return NULL and set exception if we run out of memory. */</span>
+
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> MAX_LONG_DIGITS \
+    ((PY_SSIZE_T_MAX - offsetof(PyLongObject, ob_digit))/sizeof(digit))</span>
+
+PyLongObject *
+_PyLong_New(Py_ssize_t size)
+{
+    PyLongObject *result;
+    <span class="hljs-comment">/* Number of bytes needed is: offsetof(PyLongObject, ob_digit) +
+       sizeof(digit)*size.  Previous incarnations of this code used
+       sizeof(PyVarObject) instead of the offsetof, but this risks being
+       incorrect in the presence of padding between the PyVarObject header
+       and the digits. */</span>
+    <span class="hljs-keyword">if</span> (size &gt; (Py_ssize_t)MAX_LONG_DIGITS) {
+        PyErr_SetString(PyExc_OverflowError,
+                        <span class="hljs-string">"too many digits in integer"</span>);
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;
+    }
+    result = PyObject_MALLOC(offsetof(PyLongObject, ob_digit) +
+                             size*<span class="hljs-keyword">sizeof</span>(digit));
+    <span class="hljs-keyword">if</span> (!result) {
+        PyErr_NoMemory();
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;
+    }
+    <span class="hljs-keyword">return</span> (PyLongObject*)PyObject_INIT_VAR(result, &amp;PyLong_Type, size);
+}
+</code></pre>
+<blockquote>
+<p><code>result = PyObject_MALLOC(offsetof(PyLongObject, ob_digit) +  size*sizeof(digit));</code></p>
+</blockquote>
+<p>每一个大整数，均创建一个新的对象。id(num)均不同。</p>
+<h3 id="4192824434">2.4 字符串的intern机制<a href="https://www.cnblogs.com/panlq/p/13096942.html#4192824434" class="esa-anchor">#</a></h3>
+<blockquote>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_5">Copy</div><code class="hljs swift" id="copy_target_5"><span class="hljs-type">Objects</span>/unicodeobject.<span class="hljs-built_in">c</span>
+<span class="hljs-type">Objects</span>/codeobject.<span class="hljs-built_in">c</span>
+</code></pre>
+</blockquote>
+<blockquote>
+<p><code>PyStringObject</code>对象的intern机制之目的是：对于被intern之后的字符串，比如“Ruby”，在整个Python的运行期间，系统中都只有唯一的一个与字符串“Ruby”对应的<code>PyStringObject</code>对象。这样当判断两个<code>PyStringObject</code>对象是否相同时，如果它们都被intern了，那么只需要简单地检查它们对应的<code>PyObject*</code>是否相同即可。这个机制既节省了空间，又简化了对<code>PyStringObject</code>对象的比较，嗯，可谓是一箭双雕哇。</p>
+<p>摘自：《Python源码剖析》 — 陈儒</p>
+</blockquote>
+<p>Python3中<code>PyUnicodeObject</code>对象的<code>intern</code>机制和Python2的<code>PyStringObject</code>对象<code>intern</code>机制一样，主要为了节省内存的开销，利用字符串对象的不可变性，对存在的字符串对象重复利用</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_6">Copy</div><code class="language-powershell hljs" id="copy_target_6"><span class="hljs-keyword">In</span> [<span class="hljs-number">50</span>]: a = <span class="hljs-string">'python'</span>
+
+<span class="hljs-keyword">In</span> [<span class="hljs-number">51</span>]: b = <span class="hljs-string">'python'</span>
+
+<span class="hljs-keyword">In</span> [<span class="hljs-number">52</span>]: id(a)
+Out[<span class="hljs-number">52</span>]: <span class="hljs-number">442782398256</span>
+
+<span class="hljs-keyword">In</span> [<span class="hljs-number">53</span>]: id(b)
+Out[<span class="hljs-number">53</span>]: <span class="hljs-number">442782398256</span>
+
+<span class="hljs-keyword">In</span> [<span class="hljs-number">54</span>]: b = <span class="hljs-string">'hello python'</span>
+
+<span class="hljs-keyword">In</span> [<span class="hljs-number">55</span>]: a = <span class="hljs-string">'hello python'</span>
+
+<span class="hljs-keyword">In</span> [<span class="hljs-number">56</span>]: id(a)
+Out[<span class="hljs-number">56</span>]: <span class="hljs-number">442808585520</span>
+
+<span class="hljs-keyword">In</span> [<span class="hljs-number">57</span>]: id(b)
+Out[<span class="hljs-number">57</span>]: <span class="hljs-number">442726541488</span>
+</code></pre>
+<p><strong>什么样的字符串会使用<code>intern</code>机制?</strong></p>
+<p>intern机制跟编译时期有关，相关代码在<code>Objects/codeobject.c</code></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_7">Copy</div><code class="language-c++ hljs" id="copy_target_7"><span class="hljs-comment">/* Intern selected string constants */</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span>
+<span class="hljs-title">intern_string_constants</span><span class="hljs-params">(PyObject *tuple)</span>
+</span>{
+    <span class="hljs-keyword">int</span> modified = <span class="hljs-number">0</span>;
+    Py_ssize_t i;
+
+    <span class="hljs-keyword">for</span> (i = PyTuple_GET_SIZE(tuple); --i &gt;= <span class="hljs-number">0</span>; ) {
+        PyObject *v = PyTuple_GET_ITEM(tuple, i);
+        <span class="hljs-keyword">if</span> (PyUnicode_CheckExact(v)) {
+            <span class="hljs-keyword">if</span> (PyUnicode_READY(v) == <span class="hljs-number">-1</span>) {
+                PyErr_Clear();
+                <span class="hljs-keyword">continue</span>;
+            }
+            <span class="hljs-keyword">if</span> (all_name_chars(v)) {
+                PyObject *w = v;
+                PyUnicode_InternInPlace(&amp;v);
+                <span class="hljs-keyword">if</span> (w != v) {
+                    PyTuple_SET_ITEM(tuple, i, v);
+                    modified = <span class="hljs-number">1</span>;
+                }
+            }
+        }
+        <span class="hljs-comment">/*....*/</span>
+}
+    
+<span class="hljs-comment">/* all_name_chars(s): true iff s matches [a-zA-Z0-9_]* */</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span>
+<span class="hljs-title">all_name_chars</span><span class="hljs-params">(PyObject *o)</span>
+</span>{
+    <span class="hljs-keyword">const</span> <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *s, *e;
+
+    <span class="hljs-keyword">if</span> (!PyUnicode_IS_ASCII(o))
+        <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+
+    s = PyUnicode_1BYTE_DATA(o);
+    e = s + PyUnicode_GET_LENGTH(o);
+    <span class="hljs-keyword">for</span> (; s != e; s++) {
+        <span class="hljs-keyword">if</span> (!Py_ISALNUM(*s) &amp;&amp; *s != <span class="hljs-string">'_'</span>)
+            <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;
+}
+
+</code></pre>
+<blockquote>
+<p>可见 all_name_chars 决定了是否会 intern，简单来说就是 ascii 字母，数字和下划线组成的字符串会被缓存。但是不仅如此。2.5还会说</p>
+</blockquote>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_8">Copy</div><code class="language-c++ hljs" id="copy_target_8"><span class="hljs-comment">/* This dictionary holds all interned unicode strings.  Note that references
+   to strings in this dictionary are *not* counted in the string's ob_refcnt.
+   When the interned string reaches a refcnt of 0 the string deallocation
+   function will delete the reference from this dictionary.
+
+   Another way to look at this is that to say that the actual reference
+   count of a string is:  s-&gt;ob_refcnt + (s-&gt;state ? 2 : 0)
+*/</span>
+<span class="hljs-keyword">static</span> PyObject *interned = <span class="hljs-literal">NULL</span>;
+<span class="hljs-comment">/*省略*/</span>
+<span class="hljs-function"><span class="hljs-keyword">void</span>
+<span class="hljs-title">PyUnicode_InternInPlace</span><span class="hljs-params">(PyObject **p)</span>
+</span>{
+    PyObject *s = *p;
+    PyObject *t;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">ifdef</span> Py_DEBUG</span>
+    assert(s != <span class="hljs-literal">NULL</span>);
+    assert(_PyUnicode_CHECK(s));
+<span class="hljs-meta">#<span class="hljs-meta-keyword">else</span></span>
+    <span class="hljs-keyword">if</span> (s == <span class="hljs-literal">NULL</span> || !PyUnicode_Check(s))
+        <span class="hljs-keyword">return</span>;
+<span class="hljs-meta">#<span class="hljs-meta-keyword">endif</span></span>
+    <span class="hljs-comment">/* If it's a subclass, we don't really know what putting
+       it in the interned dict might do. */</span>
+    <span class="hljs-keyword">if</span> (!PyUnicode_CheckExact(s))
+        <span class="hljs-keyword">return</span>;
+    <span class="hljs-comment">// [1]</span>
+    <span class="hljs-keyword">if</span> (PyUnicode_CHECK_INTERNED(s))
+        <span class="hljs-keyword">return</span>;
+    <span class="hljs-keyword">if</span> (interned == <span class="hljs-literal">NULL</span>) {
+        interned = PyDict_New();
+        <span class="hljs-keyword">if</span> (interned == <span class="hljs-literal">NULL</span>) {
+            PyErr_Clear(); <span class="hljs-comment">/* Don't leave an exception */</span>
+            <span class="hljs-keyword">return</span>;
+        }
+    }
+    Py_ALLOW_RECURSION
+    <span class="hljs-comment">// [2]</span>
+    t = PyDict_SetDefault(interned, s, s);
+    <span class="hljs-function">Py_END_ALLOW_RECURSION
+    <span class="hljs-title">if</span> <span class="hljs-params">(t == <span class="hljs-literal">NULL</span>)</span> </span>{
+        PyErr_Clear();
+        <span class="hljs-keyword">return</span>;
+    }
+    <span class="hljs-comment">// [3]</span>
+    <span class="hljs-keyword">if</span> (t != s) {
+        Py_INCREF(t);
+        Py_SETREF(*p, t);
+        <span class="hljs-keyword">return</span>;
+    }
+    <span class="hljs-comment">// [4]</span>
+    <span class="hljs-comment">/* The two references in interned are not counted by refcnt.
+       The deallocator will take care of this */</span>
+    Py_REFCNT(s) -= <span class="hljs-number">2</span>;
+    _PyUnicode_STATE(s).interned = SSTATE_INTERNED_MORTAL;
+}
+</code></pre>
+<p>通过函数我们可以得知，python中维护这一个interned变量的指针，这个变量指向<code>PyDict_New</code>创建的对象，而<code>PyDict_New</code>实际上创建了一个<code>PyDictObject</code>对象，是Python中<code>dict</code>类型的对象。实际上intern机制就是维护一个字典，这个字典中记录着被intern机制处理过的字符串对象，<code>[1]</code>处<code>PyUnicode_CHECK_INTERNED</code>宏检查字符串对象的<code>state.interned</code>是否被标记，</p>
+<p>如果字符串对象的<code>state.interned</code>被标记了，就直接返回；<code>[2]</code>处<strong>尝试</strong>把没有被标记的<code>字符串对象s</code>作为<code>key-value</code>加入<code>interned</code>字典中；<code>[3]</code>处表示<code>字符串对象s</code>已经在<code>interned</code>字典中（对应的value值是<code>字符串对象t</code>），（通过<code>Py_SETREF</code>宏来改变p指针的指向），且原<code>字符串对象p</code>会因引用计数为零被回收。<code>Py_SETREF</code>宏在<code>Include/object.h</code>定义着：</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_9">Copy</div><code class="language-c hljs" id="copy_target_9"><span class="hljs-comment">/* Safely decref `op` and set `op` to `op2`.
+ *
+ * As in case of Py_CLEAR "the obvious" code can be deadly:
+ *
+ *     Py_DECREF(op);
+ *     op = op2;
+ *
+ * The safe way is:
+ *
+ *      Py_SETREF(op, op2);
+ *
+ * That arranges to set `op` to `op2` _before_ decref'ing, so that any code
+ * triggered as a side-effect of `op` getting torn down no longer believes
+ * `op` points to a valid object.
+ *
+ * Py_XSETREF is a variant of Py_SETREF that uses Py_XDECREF instead of
+ * Py_DECREF.
+ */</span>
+
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> Py_SETREF(op, op2)                      \
+    do {                                        \
+        PyObject *_py_tmp = (PyObject *)(op);   \
+        (op) = (op2);                           \
+        Py_DECREF(_py_tmp);                     \
+    } while (0)</span>
+</code></pre>
+<p><code>[4]</code>中把新加入<code>interned</code>字典中的字符串对象做减引用操作，并把<code>state.interned</code>标记成<code>SSTATE_INTERNED_MORTAL</code>。<code>SSTATE_INTERNED_MORTAL</code>表示字符串对象被intern机制处理，但会随着引用计数被回收；<code>interned</code>标记还有另外一种<code>SSTATE_INTERNED_IMMORTAL</code>，表示被intern机制处理但对象不可销毁，会与Python解释器同在。<code>PyUnicode_InternInPlace</code>只能创建<code>SSTATE_INTERNED_MORTAL</code>状态的字符串，要想创建<code>SSTATE_INTERNED_IMMORTAL</code>状态的字符串需要通过另外一个接口，强制改变intern的状态</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_10">Copy</div><code class="language-c++ hljs" id="copy_target_10"><span class="hljs-function"><span class="hljs-keyword">void</span>
+<span class="hljs-title">PyUnicode_InternImmortal</span><span class="hljs-params">(PyObject **p)</span>
+</span>{
+    PyUnicode_InternInPlace(p);
+    <span class="hljs-keyword">if</span> (PyUnicode_CHECK_INTERNED(*p) != SSTATE_INTERNED_IMMORTAL) {
+        _PyUnicode_STATE(*p).interned = SSTATE_INTERNED_IMMORTAL;
+        Py_INCREF(*p);
+    }
+}
+</code></pre>
+<p><strong>为什么引用<code>Py_REFCNT(s) -= 2;</code>要-2呢？</strong></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_11">Copy</div><code class="language-c++ hljs" id="copy_target_11">PyDict_SetDefault(PyObject *d, PyObject *key, PyObject *defaultobj)
+{
+    PyDictObject *mp = (PyDictObject *)d;
+    PyObject *value;
+    Py_hash_t hash;
+
+    <span class="hljs-comment">/*...*/</span>
+    <span class="hljs-keyword">if</span> (ix == DKIX_EMPTY) {
+        <span class="hljs-comment">/*...*/</span>
+        Py_ssize_t hashpos = find_empty_slot(mp-&gt;ma_keys, hash);
+        ep0 = DK_ENTRIES(mp-&gt;ma_keys);
+        ep = &amp;ep0[mp-&gt;ma_keys-&gt;dk_nentries];
+        dictkeys_set_index(mp-&gt;ma_keys, hashpos, mp-&gt;ma_keys-&gt;dk_nentries);
+        Py_INCREF(key);
+        Py_INCREF(value);
+        <span class="hljs-comment">/*...*/</span>
+    <span class="hljs-keyword">return</span> value;
+}
+</code></pre>
+<blockquote>
+<p>对于被intern机制处理了的PyStringObject对象，Python采用了特殊的引用计数机制。在将一个PyStringObject对象a的PyObject指针<strong>作为key和value</strong>添加到interned中时，PyDictObject对象会通过这两个指针对a的引用计数进行两次加1的操作。但是Python的设计者规定在interned中a的指针不能被视为对象a的有效引用，因为如果是有效引用的话，那么a的引用计数在Python结束之前永远都不可能为0，因为interned中至少有两个指针引用了a，那么删除a就永远不可能了，这显然是没有道理的。<br>
+摘自：《Python源码剖析》 — 陈儒</p>
+</blockquote>
+<p><strong>注意：</strong>实际上，即使Python会对一个字符串进行intern机制的处理，也会先创建一个<code>PyUnicodeObject</code>对象，然后检查在<code>interned</code>字典中是否有值和其相同，存在的话就将<code>interned</code>字典保存的value值返回，之前临时创建的字符串对象会由于引用计数为零而回收。</p>
+<p><strong>是否可以直接对C原生对象做intern的动作呢？不需要创建临时对象</strong></p>
+<p>事实上<code>CPython</code>确实提供了以<code>char * </code>为参数的intern机制相关函数，但是，也是一样的创建temp在设置intern.</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_12">Copy</div><code class="language-c++ hljs" id="copy_target_12">PyUnicode_InternImmortal(PyObject **p)
+{
+    PyUnicode_InternInPlace(p);
+    <span class="hljs-keyword">if</span> (PyUnicode_CHECK_INTERNED(*p) != SSTATE_INTERNED_IMMORTAL) {
+        _PyUnicode_STATE(*p).interned = SSTATE_INTERNED_IMMORTAL;
+        Py_INCREF(*p);
+    }
+}
+</code></pre>
+<p><strong>为什么需要临时对象？</strong></p>
+<blockquote>
+<p>因为PyDict_SetDefault() 操作的是PyDictObject对象，而该对象必须以PyObject*指针作为键</p>
+</blockquote>
+<h3 id="155784491">2.5 字符缓冲池（单字符）<a href="https://www.cnblogs.com/panlq/p/13096942.html#155784491" class="esa-anchor">#</a></h3>
+<p>python为小整数对象准备了小整数对象池，当然对于常用的字符，python对应的也建了字符串缓冲池，因为 python3 中通过 <code>unicode_latin1[256] </code><strong>将长度为 1 的 ascii 的字符也缓存了</strong></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_13">Copy</div><code class="language-c hljs" id="copy_target_13"><span class="hljs-comment">/* Single character Unicode strings in the Latin-1 range are being
+   shared as well. */</span>
+<span class="hljs-keyword">static</span> PyObject *unicode_latin1[<span class="hljs-number">256</span>] = {<span class="hljs-literal">NULL</span>};
+
+unicode_decode_utf8(){
+    <span class="hljs-comment">/*省略*/</span>
+    <span class="hljs-comment">/* ASCII is equivalent to the first 128 ordinals in Unicode. */</span>
+    <span class="hljs-keyword">if</span> (size == <span class="hljs-number">1</span> &amp;&amp; (<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span>)s[<span class="hljs-number">0</span>] &lt; <span class="hljs-number">128</span>) {
+        <span class="hljs-keyword">if</span> (consumed)
+            *consumed = <span class="hljs-number">1</span>;
+        <span class="hljs-keyword">return</span> get_latin1_char((<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span>)s[<span class="hljs-number">0</span>]);
+    }
+    <span class="hljs-comment">/*省略*/</span>
+}
+
+
+<span class="hljs-function"><span class="hljs-keyword">static</span> PyObject*
+<span class="hljs-title">get_latin1_char</span><span class="hljs-params">(<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> ch)</span>
+</span>{
+    PyObject *unicode = unicode_latin1[ch];
+    <span class="hljs-keyword">if</span> (!unicode) {
+        unicode = PyUnicode_New(<span class="hljs-number">1</span>, ch);
+        <span class="hljs-keyword">if</span> (!unicode)
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">NULL</span>;
+        PyUnicode_1BYTE_DATA(unicode)[<span class="hljs-number">0</span>] = ch;
+        assert(_PyUnicode_CheckConsistency(unicode, <span class="hljs-number">1</span>));
+        unicode_latin1[ch] = unicode;
+    }
+    Py_INCREF(unicode);
+    <span class="hljs-keyword">return</span> unicode;
+}
+</code></pre>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_14">Copy</div><code class="language-powershell hljs" id="copy_target_14"><span class="hljs-keyword">In</span> [<span class="hljs-number">46</span>]: a = <span class="hljs-string">'p'</span>
+
+<span class="hljs-keyword">In</span> [<span class="hljs-number">47</span>]: b = <span class="hljs-string">'p'</span>
+
+<span class="hljs-keyword">In</span> [<span class="hljs-number">48</span>]: id(a)
+Out[<span class="hljs-number">48</span>]: <span class="hljs-number">442757120384</span>
+
+<span class="hljs-keyword">In</span> [<span class="hljs-number">49</span>]: id(b)
+Out[<span class="hljs-number">49</span>]: <span class="hljs-number">442757120384</span>
+</code></pre>
+<p><strong>当然单字符也包括空字符。</strong></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_15">Copy</div><code class="language-c++ hljs" id="copy_target_15"><span class="hljs-comment">/* The empty Unicode object is shared to improve performance. */</span>
+<span class="hljs-keyword">static</span> PyObject *unicode_empty = <span class="hljs-literal">NULL</span>;
+</code></pre>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_16">Copy</div><code class="language-shell hljs" id="copy_target_16">In [8]: a = 'hello' + 'python'
+
+In [9]: b = 'hellopython'
+
+In [10]: a is b
+Out[10]: True
+
+In [11]: a = 'hello ' + 'python'
+
+In [12]: b = 'hello python'
+
+In [13]: id(a)
+Out[13]: 118388503536
+
+In [14]: id(b)
+Out[14]: 118387544240
+
+In [15]: 'hello ' + 'python' is 'hello python'
+Out[15]: False
+
+In [16]: 'hello_' + 'python' is 'hello_python'
+Out[16]: True
+</code></pre>
+<h3 id="1123116531">2.6 小结：<a href="https://www.cnblogs.com/panlq/p/13096942.html#1123116531" class="esa-anchor">#</a></h3>
+<ul>
+<li>
+<p><strong>小整数[-5， 257)共用对象，常驻内存</strong></p>
+</li>
+<li>
+<p><strong>单个字母，长度为 1 的 ascii 的字符<a href="https://en.wikipedia.org/wiki/ISO/IEC_8859-1" target="_blank">latin1</a>会被interned， 包括空字符，共用对象，常驻内存</strong></p>
+</li>
+<li>
+<p><strong>由字母、数字、下划线([a-zA-Z0-9_])组成的字符串，不可修改，默认开启intern机制，共用对象，引用计数为0时，销毁</strong></p>
+</li>
+<li>
+<p>字符串（含有空格），不可修改，没开启intern机制，不共用对象，引用计数为0，销毁</p>
+</li>
+</ul>
+<h2 id="841510682">3. 标记清除+分代回收<a href="https://www.cnblogs.com/panlq/p/13096942.html#841510682" class="esa-anchor">#</a></h2>
+<p>为了防止出现<strong>循环引用</strong>的致命性问题，<strong>python采用的是引用计数机制为主，标记-清除和分代收集两种机制为辅的策略</strong>。</p>
+<div style="text-align: center">
+<p><a href="./Python3 源码阅读 - 垃圾回收机制_files/2GI7nmWSPvNjpOR.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 垃圾回收机制_files/2GI7nmWSPvNjpOR.png" alt="image.png" loading="lazy"></a></p>
+</div>
+<div style="text-align: center">
+<p><a href="./Python3 源码阅读 - 垃圾回收机制_files/iLS5ATeBo3W1sVr.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 垃圾回收机制_files/iLS5ATeBo3W1sVr.png" alt="image.png" loading="lazy"></a></p>
+</div>
+我们设置 n1.next 指向 n2，同时设置 n2.prev 指回 n1，现在，我们的两个节点使用循环引用的方式构成了一个`双向链表`，同时请注意到 ABC 以及 DEF 的引用计数值已经增加到了2，现在，假定我们的程序不再使用这两个节点了，我们将 n1 和 n2 都设置为None，Python会像往常一样将每个节点的引用计数减少到1。
+<div style="text-align: center">
+<p><a href="./Python3 源码阅读 - 垃圾回收机制_files/q6IpCneRGwt2iM3.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 垃圾回收机制_files/q6IpCneRGwt2iM3.png" alt="image.png" loading="lazy"></a></p>
+</div>
+<h3 id="152944181">3.1 在python中的零代(Generation Zero)<a href="https://www.cnblogs.com/panlq/p/13096942.html#152944181" class="esa-anchor">#</a></h3>
+<p>Ruby使用一个链表(free_list)来持续追踪未使用的、自由的对象，Python使用一种不同的链表来持续追踪活跃的对象。而不将其称之为“活跃列表”，Python的内部C代码将其称为零代(Generation Zero)。每次当你创建一个对象或其他什么值的时候，Python会将其加入零代链表：</p>
+<div style="text-align: center">
+<p><a href="./Python3 源码阅读 - 垃圾回收机制_files/Yp8UMNXmP4ORFDG.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 垃圾回收机制_files/Yp8UMNXmP4ORFDG.png" alt="image.png" loading="lazy"></a></p>
+</div>
+从上边可以看到当我们创建ABC节点的时候，Python将其加入零代链表。请注意到这并不是一个真正的列表，并不能直接在你的代码中访问，事实上这个链表是一个完全内部的Python运行时。
+<p><em><strong>疑惑1：</strong></em><strong>对于容器对象(比如list、dict、class、instance等等)，是在什么时候绑定GC，放入第0链表呢？</strong></p>
+<p>相似的，当我们创建DEF节点的时候，Python将其加入同样的链表：</p>
+<div style="text-align: center">
+<p><a href="./Python3 源码阅读 - 垃圾回收机制_files/giHxS7pYNKwT8kh.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 垃圾回收机制_files/giHxS7pYNKwT8kh.png" alt="image.png" loading="lazy"></a></p>
+</div>
+现在零代包含了两个节点对象。(他还将包含Python创建的每个其他值，与一些Python自己使用的内部值。)
+<h3 id="3640539562">3.2 标记循环引用<a href="https://www.cnblogs.com/panlq/p/13096942.html#3640539562" class="esa-anchor">#</a></h3>
+<p>当达到某个 阈值之后 解释器会循环遍历，循环遍历零代列表上的每个对象，检查列表中每个互相引用的对象，根据规则减掉其引用计数。在这个过程中，Python会一个接一个的统计内部引用的数量以防过早地释放对象。以下例子便于理解：</p>
+<div style="text-align: center">
+<p><a href="./Python3 源码阅读 - 垃圾回收机制_files/Y1ORJmN2UxPnFg7.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 垃圾回收机制_files/Y1ORJmN2UxPnFg7.png" alt="image.png" loading="lazy"></a></p>
+</div>
+从上面可以看到 ABC 和 DEF 节点包含的引用数为1.有三个其他的对象同时存在于零代链表中，蓝色的箭头指示了有一些对象正在被零代链表之外的其他对象所引用。
+<div style="text-align: center">
+<p><a href="./Python3 源码阅读 - 垃圾回收机制_files/g1fsLIiYMZupBRo.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 垃圾回收机制_files/g1fsLIiYMZupBRo.png" alt="image.png" loading="lazy"></a></p>
+</div>
+通过识别内部引用，Python能够减少许多零代链表对象的引用计数。在上图的第一行中你能够看见ABC和DEF的引用计数已经变为零了，这意味着收集器可以释放它们并回收内存空间了。剩下的活跃的对象则被移动到一个新的链表：一代链表。
+<p><strong>疑惑2： 内部如何识别零代的循环引用计数，在什么阈值下会触发GC执行？</strong></p>
+<h3 id="3398826047">3.3 在源码中摸索答案<a href="https://www.cnblogs.com/panlq/p/13096942.html#3398826047" class="esa-anchor">#</a></h3>
+<p>Python通过<code>PyGC_Head</code>来跟踪container对象，<code>PyGC_Head</code>信息位于<code>PyObject_HEAD</code>之前，定义在<code>Include/objimpl.h</code>中</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_17">Copy</div><code class="language-c++ hljs" id="copy_target_17"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">union</span> _<span class="hljs-title">gc_head</span> {</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> {</span>
+        <span class="hljs-class"><span class="hljs-keyword">union</span> _<span class="hljs-title">gc_head</span> *<span class="hljs-title">gc_next</span>;</span>
+        <span class="hljs-class"><span class="hljs-keyword">union</span> _<span class="hljs-title">gc_head</span> *<span class="hljs-title">gc_prev</span>;</span>
+        Py_ssize_t gc_refs;
+    } gc;
+    <span class="hljs-keyword">double</span> dummy;  <span class="hljs-comment">/* force worst-case alignment */</span>
+} PyGC_Head;
+</code></pre>
+<p><strong>表头数据结构</strong></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_18">Copy</div><code class="language-c++ hljs" id="copy_target_18"><span class="hljs-comment">//Include/internal/mem.h</span>
+<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">gc_generation</span> {</span>
+      PyGC_Head head;
+      <span class="hljs-keyword">int</span> threshold; <span class="hljs-comment">/* collection threshold */</span>  <span class="hljs-comment">// 阈值</span>
+      <span class="hljs-keyword">int</span> count; <span class="hljs-comment">/* count of allocations or collections of younger
+                    generations */</span>    <span class="hljs-comment">// 实时个数</span>
+  };
+</code></pre>
+<p>Python中用于分代垃圾收集的三个“代”由<code>_gc_runtime_state.generations</code>数组所表示着：</p>
+<p><strong>解答疑惑2，三个代的阈值如下数组</strong></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_19">Copy</div><code class="language-c++ hljs" id="copy_target_19"><span class="hljs-comment">/* If we change this, we need to cbhange the default value in the
+   signature of gc.collect. */</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> NUM_GENERATIONS 3</span>
+
+_PyGC_Initialize(struct _gc_runtime_state *state)
+{
+    state-&gt;enabled = <span class="hljs-number">1</span>; <span class="hljs-comment">/* automatic collection enabled? */</span>
+
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> _GEN_HEAD(n) (&amp;state-&gt;generations[n].head)</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">gc_generation</span> <span class="hljs-title">generations</span>[<span class="hljs-title">NUM_GENERATIONS</span>] =</span> {
+        <span class="hljs-comment">/* PyGC_Head,                                 threshold,      count */</span>
+        {{{_GEN_HEAD(<span class="hljs-number">0</span>), _GEN_HEAD(<span class="hljs-number">0</span>), <span class="hljs-number">0</span>}},           <span class="hljs-number">700</span>,            <span class="hljs-number">0</span>},
+        {{{_GEN_HEAD(<span class="hljs-number">1</span>), _GEN_HEAD(<span class="hljs-number">1</span>), <span class="hljs-number">0</span>}},           <span class="hljs-number">10</span>,             <span class="hljs-number">0</span>},
+        {{{_GEN_HEAD(<span class="hljs-number">2</span>), _GEN_HEAD(<span class="hljs-number">2</span>), <span class="hljs-number">0</span>}},           <span class="hljs-number">10</span>,             <span class="hljs-number">0</span>},
+    };
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; NUM_GENERATIONS; i++) {
+        state-&gt;generations[i] = generations[i];
+    };
+    state-&gt;generation0 = GEN_HEAD(<span class="hljs-number">0</span>);
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">gc_generation</span> <span class="hljs-title">permanent_generation</span> =</span> {
+          {{&amp;state-&gt;permanent_generation.head, &amp;state-&gt;permanent_generation.head, <span class="hljs-number">0</span>}}, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>
+    };
+    state-&gt;permanent_generation = permanent_generation;
+}
+</code></pre>
+<div style="text-align: center">
+<p><a href="./Python3 源码阅读 - 垃圾回收机制_files/bkKPog8n3Cy1TOx.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 垃圾回收机制_files/bkKPog8n3Cy1TOx.png" alt="image.png" loading="lazy"></a></p>
+</div>
+**解答疑惑1：那container对象是什么时候加入第0“代”的container对象链表呢？**
+<p>对于python内置对象的创建，container对象是通过<code>PyObject_GC_New</code>函数来创建的，而非container对象是通过<code>PyObject_Malloc</code>函数来创建的。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_20">Copy</div><code class="language-c++ hljs" id="copy_target_20"><span class="hljs-comment">// Include/objimpl.h</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> PyObject_GC_New(type, typeobj) \
+                ( (type *) _PyObject_GC_New(typeobj) )</span>
+
+
+<span class="hljs-comment">// 调用了Modules/gcmodule.c中的_PyObject_GC_New函数：</span>
+PyObject *
+_PyObject_GC_New(PyTypeObject *tp)
+{
+    PyObject *op = _PyObject_GC_Malloc(_PyObject_SIZE(tp));
+    <span class="hljs-keyword">if</span> (op != <span class="hljs-literal">NULL</span>)
+        op = PyObject_INIT(op, tp);
+    <span class="hljs-keyword">return</span> op;
+}
+
+<span class="hljs-keyword">static</span> PyObject *
+_PyObject_GC_Alloc(<span class="hljs-keyword">int</span> use_calloc, <span class="hljs-keyword">size_t</span> basicsize)
+{
+    PyObject *op;
+    PyGC_Head *g;
+    <span class="hljs-keyword">size_t</span> size;
+    <span class="hljs-keyword">if</span> (basicsize &gt; PY_SSIZE_T_MAX - <span class="hljs-keyword">sizeof</span>(PyGC_Head))
+        <span class="hljs-keyword">return</span> PyErr_NoMemory();
+    size = <span class="hljs-keyword">sizeof</span>(PyGC_Head) + basicsize;
+    <span class="hljs-comment">// [1]  申请PyGC_Head和对象本身的内存</span>
+    <span class="hljs-keyword">if</span> (use_calloc)
+        g = (PyGC_Head *)PyObject_Calloc(<span class="hljs-number">1</span>, size);
+    <span class="hljs-keyword">else</span>
+        g = (PyGC_Head *)PyObject_Malloc(size);
+    <span class="hljs-keyword">if</span> (g == <span class="hljs-literal">NULL</span>)
+        <span class="hljs-keyword">return</span> PyErr_NoMemory();
+    <span class="hljs-comment">// [2] 设置gc_refs的值</span>
+    g-&gt;gc.gc_refs = <span class="hljs-number">0</span>;
+    _PyGCHead_SET_REFS(g, GC_UNTRACKED);
+    <span class="hljs-comment">// [3]</span>
+    generations[<span class="hljs-number">0</span>].count++; <span class="hljs-comment">/* number of allocated GC objects */</span>
+    <span class="hljs-keyword">if</span> (generations[<span class="hljs-number">0</span>].count &gt; generations[<span class="hljs-number">0</span>].threshold &amp;&amp;
+        enabled &amp;&amp;
+        generations[<span class="hljs-number">0</span>].threshold &amp;&amp;
+        !collecting &amp;&amp;
+        !PyErr_Occurred()) {
+        collecting = <span class="hljs-number">1</span>;
+        collect_generations();
+        collecting = <span class="hljs-number">0</span>;
+    }
+    <span class="hljs-comment">// [4]  FROM_GC宏定义可以通过PyGC_Head地址转换PyObject_HEAD地址，逆运算是AS_GC宏定义。</span>
+    op = FROM_GC(g);
+    <span class="hljs-keyword">return</span> op;
+}
+
+PyObject *
+_PyObject_GC_Malloc(<span class="hljs-keyword">size_t</span> basicsize)
+{
+    <span class="hljs-keyword">return</span> _PyObject_GC_Alloc(<span class="hljs-number">0</span>, basicsize);
+}
+</code></pre>
+<p>[4] <code>FROM_GC</code>宏定义可以通过<code>PyGC_Head</code>地址转换<code>PyObject_HEAD</code>地址，逆运算是<code>AS_GC</code>宏定义。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_21">Copy</div><code class="language-c++ hljs" id="copy_target_21"><span class="hljs-comment">/* Get an object's GC head */</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> AS_GC(o) ((PyGC_Head *)(o)-1)</span>
+
+<span class="hljs-comment">/* Get the object given the GC head */</span>
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> FROM_GC(g) ((PyObject *)(((PyGC_Head *)g)+1))</span>
+</code></pre>
+<p><strong>当触发阈值后，是如何进行GC回收的？</strong></p>
+<p><code>collect</code>是垃圾回收的主入口函数。<strong>特别注意 finalizers 与 python 的<code>__del__</code>绑定了</strong>。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_22">Copy</div><code class="language-c hljs" id="copy_target_22"><span class="hljs-comment">/* This is the main function.  Read this to understand how the
+ * collection process works. */</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> Py_ssize_t
+<span class="hljs-title">collect</span><span class="hljs-params">(<span class="hljs-keyword">int</span> generation, Py_ssize_t *n_collected, Py_ssize_t *n_uncollectable,
+        <span class="hljs-keyword">int</span> nofail)</span>
+</span>{
+    <span class="hljs-keyword">int</span> i;
+    Py_ssize_t m = <span class="hljs-number">0</span>; <span class="hljs-comment">/* # objects collected */</span>
+    Py_ssize_t n = <span class="hljs-number">0</span>; <span class="hljs-comment">/* # unreachable objects that couldn't be collected */</span>
+    PyGC_Head *young; <span class="hljs-comment">/* the generation we are examining */</span>
+    PyGC_Head *old; <span class="hljs-comment">/* next older generation */</span>
+    PyGC_Head unreachable; <span class="hljs-comment">/* non-problematic unreachable trash */</span>
+    PyGC_Head finalizers;  <span class="hljs-comment">/* objects with, &amp; reachable from, __del__ */</span>
+    PyGC_Head *gc;
+    _PyTime_t t1 = <span class="hljs-number">0</span>;   <span class="hljs-comment">/* initialize to prevent a compiler warning */</span>
+
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">gc_generation_stats</span> *<span class="hljs-title">stats</span> =</span> &amp;_PyRuntime.gc.generation_stats[generation];
+    
+    ...
+
+    <span class="hljs-comment">// “标记-清除”前的准备</span>
+    
+    <span class="hljs-comment">// 垃圾标记</span>
+
+    <span class="hljs-comment">// 垃圾清除</span>
+  
+    ...
+
+    <span class="hljs-comment">/* Update stats */</span>
+    <span class="hljs-keyword">if</span> (n_collected)
+        *n_collected = m;
+    <span class="hljs-keyword">if</span> (n_uncollectable)
+        *n_uncollectable = n;
+    stats-&gt;collections++;
+    stats-&gt;collected += m;
+    stats-&gt;uncollectable += n;
+
+    <span class="hljs-keyword">if</span> (PyDTrace_GC_DONE_ENABLED())
+        PyDTrace_GC_DONE(n+m);
+
+    <span class="hljs-keyword">return</span> n+m;
+}
+</code></pre>
+<h3 id="2582103402">3.3.1 标记-清除前的准备<a href="https://www.cnblogs.com/panlq/p/13096942.html#2582103402" class="esa-anchor">#</a></h3>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_23">Copy</div><code class="language-c hljs" id="copy_target_23">    <span class="hljs-comment">// [1]</span>
+    <span class="hljs-comment">/* update collection and allocation counters */</span>
+    <span class="hljs-keyword">if</span> (generation+<span class="hljs-number">1</span> &lt; NUM_GENERATIONS)
+        _PyRuntime.gc.generations[generation+<span class="hljs-number">1</span>].count += <span class="hljs-number">1</span>;
+    <span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt;= generation; i++)
+        _PyRuntime.gc.generations[i].count = <span class="hljs-number">0</span>;
+
+    <span class="hljs-comment">// [2]</span>
+    <span class="hljs-comment">/* merge younger generations with one we are currently collecting */</span>
+    <span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; generation; i++) {
+        gc_list_merge(GEN_HEAD(i), GEN_HEAD(generation));
+    }
+
+    <span class="hljs-comment">// [3]</span>
+    <span class="hljs-comment">/* handy references */</span>
+    young = GEN_HEAD(generation);
+    <span class="hljs-keyword">if</span> (generation &lt; NUM_GENERATIONS<span class="hljs-number">-1</span>)
+        old = GEN_HEAD(generation+<span class="hljs-number">1</span>);
+    <span class="hljs-keyword">else</span>
+        old = young;
+
+    <span class="hljs-comment">// [4]</span>
+    <span class="hljs-comment">/* Using ob_refcnt and gc_refs, calculate which objects in the
+     * container set are reachable from outside the set (i.e., have a
+     * refcount greater than 0 when all the references within the
+     * set are taken into account).
+     */</span>
+    update_refs(young);
+    subtract_refs(young);
+</code></pre>
+<p>[1] 先更新了将被回收的“代”以及老一“代”的count计数器。<br>
+这边对老一“代”的count计数器增量1就可以看出来在第1“代”和第2“代”的count值其实表示的是该代垃圾回收的次数。<br>
+[2] 通过<code>gc_list_merge</code>函数将这些“代”合并成一个链表。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_24">Copy</div><code class="hljs php" id="copy_target_24"><span class="hljs-comment">/* append list `from` onto list `to`; `from` becomes an empty list */</span>
+<span class="hljs-built_in">static</span> <span class="hljs-keyword">void</span>
+gc_list_merge(PyGC_Head *<span class="hljs-keyword">from</span>, PyGC_Head *to)
+{
+    PyGC_Head *tail;
+    assert(<span class="hljs-keyword">from</span> != to);
+    <span class="hljs-keyword">if</span> (!gc_list_is_empty(<span class="hljs-keyword">from</span>)) {
+        tail = to-&gt;gc.gc_prev;
+        tail-&gt;gc.gc_next = <span class="hljs-keyword">from</span>-&gt;gc.gc_next;
+        tail-&gt;gc.gc_next-&gt;gc.gc_prev = tail;
+        to-&gt;gc.gc_prev = <span class="hljs-keyword">from</span>-&gt;gc.gc_prev;
+        to-&gt;gc.gc_prev-&gt;gc.gc_next = to;
+    }
+    gc_list_init(<span class="hljs-keyword">from</span>);
+}
+
+<span class="hljs-built_in">static</span> <span class="hljs-keyword">void</span>
+gc_list_init(PyGC_Head *<span class="hljs-keyword">list</span>)
+{
+    <span class="hljs-keyword">list</span>-&gt;gc.gc_prev = <span class="hljs-keyword">list</span>;
+    <span class="hljs-keyword">list</span>-&gt;gc.gc_next = <span class="hljs-keyword">list</span>;
+}
+</code></pre>
+<p><code>gc_list_merge</code>函数将from链表链接到to链表末尾并把from链表置为空链表。</p>
+<p>[3] 经过合并操作之后，所有需要被进行垃圾回收的对象都链接到young“代”（满足超过阈值的最老“代”），并记录old“代”，后面需要将不可回收的对象移到old“代”。</p>
+<p>链表的合并操作：</p>
+<div style="text-align: center">
+<p><a href="./Python3 源码阅读 - 垃圾回收机制_files/g4QiLXuzaD2eKEo.png" data-title="" data-alt="image.png" data-lightbox="roadtrip"><img src="./Python3 源码阅读 - 垃圾回收机制_files/g4QiLXuzaD2eKEo.png" alt="image.png" loading="lazy" class="medium-zoom-image"></a></p>
+</div>
+[4] 寻找root object集合
+<p>要对合并的链表进行垃圾标记，首先需要寻找root object集合。<br>
+所谓的root object即是一些全局引用和函数栈中的引用。这些引用所用的对象是不可被删除的。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_25">Copy</div><code class="language-python hljs" id="copy_target_25">list1 = []
+list2 = []
+list1.append(list2)
+list2.append(list1)
+a = list1
+<span class="hljs-keyword">del</span> list1
+<span class="hljs-keyword">del</span> list2
+</code></pre>
+<p>上面的Python中循环引用的代码，变量a所指向的对象就是root object。</p>
+<p>三色标记模型</p>
+<h3 id="1249705633">3.3.2 垃圾标记<a href="https://www.cnblogs.com/panlq/p/13096942.html#1249705633" class="esa-anchor">#</a></h3>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_26">Copy</div><code class="language-c hljs" id="copy_target_26"><span class="hljs-comment">// [1]</span>
+<span class="hljs-comment">/* Leave everything reachable from outside young in young, and move
+     * everything else (in young) to unreachable.
+     * <span class="hljs-doctag">NOTE:</span>  This used to move the reachable objects into a reachable
+     * set instead.  But most things usually turn out to be reachable,
+     * so it's more efficient to move the unreachable things.
+     */</span>
+gc_list_init(&amp;unreachable);
+move_unreachable(young, &amp;unreachable);
+
+<span class="hljs-comment">// [2]</span>
+<span class="hljs-comment">/* Move reachable objects to next generation. */</span>
+<span class="hljs-keyword">if</span> (young != old) {
+    <span class="hljs-keyword">if</span> (generation == NUM_GENERATIONS - <span class="hljs-number">2</span>) {
+        _PyRuntime.gc.long_lived_pending += gc_list_size(young);
+    }
+    gc_list_merge(young, old);
+}
+<span class="hljs-keyword">else</span> {
+    <span class="hljs-comment">/* We only untrack dicts in full collections, to avoid quadratic
+           dict build-up. See issue #14775. */</span>
+    untrack_dicts(young);
+    _PyRuntime.gc.long_lived_pending = <span class="hljs-number">0</span>;
+    _PyRuntime.gc.long_lived_total = gc_list_size(young);
+}
+</code></pre>
+<p>[1] 初始化不可达链表，调用<code>move_unreachable</code>函数将循环引用的对象移动到不可达链表中：</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_27">Copy</div><code class="language-c hljs" id="copy_target_27"><span class="hljs-comment">/* Move the unreachable objects from young to unreachable.  After this,
+ * all objects in young have gc_refs = GC_REACHABLE, and all objects in
+ * unreachable have gc_refs = GC_TENTATIVELY_UNREACHABLE.  All tracked
+ * gc objects not in young or unreachable still have gc_refs = GC_REACHABLE.
+ * All objects in young after this are directly or indirectly reachable
+ * from outside the original young; and all objects in unreachable are
+ * not.
+ */</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span>
+<span class="hljs-title">move_unreachable</span><span class="hljs-params">(PyGC_Head *young, PyGC_Head *unreachable)</span>
+</span>{
+    PyGC_Head *gc = young-&gt;gc.gc_next;
+
+    <span class="hljs-comment">/* Invariants:  all objects "to the left" of us in young have gc_refs
+     * = GC_REACHABLE, and are indeed reachable (directly or indirectly)
+     * from outside the young list as it was at entry.  All other objects
+     * from the original young "to the left" of us are in unreachable now,
+     * and have gc_refs = GC_TENTATIVELY_UNREACHABLE.  All objects to the
+     * left of us in 'young' now have been scanned, and no objects here
+     * or to the right have been scanned yet.
+     */</span>
+
+    <span class="hljs-keyword">while</span> (gc != young) {
+        PyGC_Head *next;
+
+        <span class="hljs-keyword">if</span> (_PyGCHead_REFS(gc)) {
+            <span class="hljs-comment">/* gc is definitely reachable from outside the
+             * original 'young'.  Mark it as such, and traverse
+             * its pointers to find any other objects that may
+             * be directly reachable from it.  Note that the
+             * call to tp_traverse may append objects to young,
+             * so we have to wait until it returns to determine
+             * the next object to visit.
+             */</span>
+            PyObject *op = FROM_GC(gc);
+            traverseproc traverse = Py_TYPE(op)-&gt;tp_traverse;
+            assert(_PyGCHead_REFS(gc) &gt; <span class="hljs-number">0</span>);
+            _PyGCHead_SET_REFS(gc, GC_REACHABLE);
+            (<span class="hljs-keyword">void</span>) traverse(op,
+                            (visitproc)visit_reachable,
+                            (<span class="hljs-keyword">void</span> *)young);
+            next = gc-&gt;gc.gc_next;
+            <span class="hljs-keyword">if</span> (PyTuple_CheckExact(op)) {
+                _PyTuple_MaybeUntrack(op);
+            }
+        }
+        <span class="hljs-keyword">else</span> {
+            <span class="hljs-comment">/* This *may* be unreachable.  To make progress,
+             * assume it is.  gc isn't directly reachable from
+             * any object we've already traversed, but may be
+             * reachable from an object we haven't gotten to yet.
+             * visit_reachable will eventually move gc back into
+             * young if that's so, and we'll see it again.
+             */</span>
+            next = gc-&gt;gc.gc_next;
+            gc_list_move(gc, unreachable);
+            _PyGCHead_SET_REFS(gc, GC_TENTATIVELY_UNREACHABLE);
+        }
+        gc = next;
+    }
+}
+</code></pre>
+<p>这边遍历young“代”的container对象链表，<code>_PyGCHead_REFS(gc)</code>判断是不是root object或从某个root object能直接/间接引用的对象，由于root object集合中的对象是不能回收的，因此，被这些对象直接或间接引用的对象也是不能回收的。</p>
+<p><code>_PyGCHead_REFS(gc)</code>为0并不能断定这个对象是可回收的，但是还是先移动到<code>unreachable</code>链表中，设置了<code>GC_TENTATIVELY_UNREACHABLE</code>标志表示暂且认为是不可达的，如果是存在被root object直接或间接引用的对象，这样的对象还会被移出<code>unreachable</code>链表中。</p>
+<p>[2] 将可达的对象移到下一“代”。</p>
+<h3 id="2879263896">3.3.3 垃圾清除<a href="https://www.cnblogs.com/panlq/p/13096942.html#2879263896" class="esa-anchor">#</a></h3>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_28">Copy</div><code class="language-c hljs" id="copy_target_28"><span class="hljs-comment">// [1]</span>
+    <span class="hljs-comment">/* All objects in unreachable are trash, but objects reachable from
+     * legacy finalizers (e.g. tp_del) can't safely be deleted.
+     */</span>
+    gc_list_init(&amp;finalizers);
+    move_legacy_finalizers(&amp;unreachable, &amp;finalizers);
+    <span class="hljs-comment">/* finalizers contains the unreachable objects with a legacy finalizer;
+     * unreachable objects reachable *from* those are also uncollectable,
+     * and we move those into the finalizers list too.
+     */</span>
+    move_legacy_finalizer_reachable(&amp;finalizers);
+
+    <span class="hljs-comment">// [2]</span>
+    <span class="hljs-comment">/* Collect statistics on collectable objects found and print
+     * debugging information.
+     */</span>
+    <span class="hljs-keyword">for</span> (gc = unreachable.gc.gc_next; gc != &amp;unreachable;
+                    gc = gc-&gt;gc.gc_next) {
+        m++;
+    }
+
+    <span class="hljs-comment">// [3]</span>
+    <span class="hljs-comment">/* Clear weakrefs and invoke callbacks as necessary. */</span>
+    m += handle_weakrefs(&amp;unreachable, old);
+
+    <span class="hljs-comment">// [4]</span>
+    <span class="hljs-comment">/* Call tp_finalize on objects which have one. */</span>
+    finalize_garbage(&amp;unreachable);
+
+    <span class="hljs-comment">// [5]</span>
+    <span class="hljs-keyword">if</span> (check_garbage(&amp;unreachable)) {
+        revive_garbage(&amp;unreachable);
+        gc_list_merge(&amp;unreachable, old);
+    }
+    <span class="hljs-keyword">else</span> {
+        <span class="hljs-comment">/* Call tp_clear on objects in the unreachable set.  This will cause
+         * the reference cycles to be broken.  It may also cause some objects
+         * in finalizers to be freed.
+         */</span>
+        delete_garbage(&amp;unreachable, old);
+    }
+    
+    <span class="hljs-comment">// [6]</span>
+    <span class="hljs-comment">/* Collect statistics on uncollectable objects found and print
+     * debugging information. */</span>
+    <span class="hljs-keyword">for</span> (gc = finalizers.gc.gc_next;
+         gc != &amp;finalizers;
+         gc = gc-&gt;gc.gc_next) {
+        n++;
+    }
+    
+    ...
+
+    <span class="hljs-comment">// [7]</span>
+    <span class="hljs-comment">/* Append instances in the uncollectable set to a Python
+     * reachable list of garbage.  The programmer has to deal with
+     * this if they insist on creating this type of structure.
+     */</span>
+    (<span class="hljs-keyword">void</span>)handle_legacy_finalizers(&amp;finalizers, old);
+    
+    <span class="hljs-comment">/* Clear free list only during the collection of the highest
+     * generation */</span>
+    <span class="hljs-keyword">if</span> (generation == NUM_GENERATIONS<span class="hljs-number">-1</span>) {
+        clear_freelists();
+    }
+</code></pre>
+<p>[1] 处理<code>unreachable</code>链表中有finalizer的对象。即python中 实现了<code>__del__</code>魔法方法的对象</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_29">Copy</div><code class="language-c hljs" id="copy_target_29"><span class="hljs-comment">/* Move the objects in unreachable with tp_del slots into `finalizers`.
+ * Objects moved into `finalizers` have gc_refs set to GC_REACHABLE; the
+ * objects remaining in unreachable are left at GC_TENTATIVELY_UNREACHABLE.
+ */</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span>
+<span class="hljs-title">move_legacy_finalizers</span><span class="hljs-params">(PyGC_Head *unreachable, PyGC_Head *finalizers)</span>
+</span>{
+    PyGC_Head *gc;
+    PyGC_Head *next;
+
+    <span class="hljs-comment">/* March over unreachable.  Move objects with finalizers into
+     * `finalizers`.
+     */</span>
+    <span class="hljs-keyword">for</span> (gc = unreachable-&gt;gc.gc_next; gc != unreachable; gc = next) {
+        PyObject *op = FROM_GC(gc);
+
+        assert(IS_TENTATIVELY_UNREACHABLE(op));
+        next = gc-&gt;gc.gc_next;
+
+        <span class="hljs-keyword">if</span> (has_legacy_finalizer(op)) {
+            gc_list_move(gc, finalizers);
+            _PyGCHead_SET_REFS(gc, GC_REACHABLE);
+        }
+    }
+}
+</code></pre>
+<p>遍历<code>unreachable</code>链表，将拥有finalizer的实例对象移到<code>finalizers</code>链表中，并标示为<code>GC_REACHABLE</code>。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_30">Copy</div><code class="language-c hljs" id="copy_target_30"><span class="hljs-comment">/* Return true if object has a pre-PEP 442 finalization method. */</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span>
+<span class="hljs-title">has_legacy_finalizer</span><span class="hljs-params">(PyObject *op)</span>
+</span>{
+    <span class="hljs-keyword">return</span> op-&gt;ob_type-&gt;tp_del != <span class="hljs-literal">NULL</span>;
+}
+</code></pre>
+<p><strong>拥有finalizer的实例对象指的就是实现了<code>tp_del</code>函数的对象。</strong></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_31">Copy</div><code class="language-c hljs" id="copy_target_31"><span class="hljs-comment">/* Move objects that are reachable from finalizers, from the unreachable set
+ * into finalizers set.
+ */</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span>
+<span class="hljs-title">move_legacy_finalizer_reachable</span><span class="hljs-params">(PyGC_Head *finalizers)</span>
+</span>{
+    traverseproc traverse;
+    PyGC_Head *gc = finalizers-&gt;gc.gc_next;
+    <span class="hljs-keyword">for</span> (; gc != finalizers; gc = gc-&gt;gc.gc_next) {
+        <span class="hljs-comment">/* Note that the finalizers list may grow during this. */</span>
+        traverse = Py_TYPE(FROM_GC(gc))-&gt;tp_traverse;
+        (<span class="hljs-keyword">void</span>) traverse(FROM_GC(gc),
+                        (visitproc)visit_move,
+                        (<span class="hljs-keyword">void</span> *)finalizers);
+    }
+}
+</code></pre>
+<p>对<code>finalizers</code>链表中拥有finalizer的实例对象遍历其引用对象，调用<code>visit_move</code>访问者，这些被引用的对象也不应该被释放。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_32">Copy</div><code class="language-c hljs" id="copy_target_32"><span class="hljs-comment">/* A traversal callback for move_legacy_finalizer_reachable. */</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span>
+<span class="hljs-title">visit_move</span><span class="hljs-params">(PyObject *op, PyGC_Head *tolist)</span>
+</span>{
+    <span class="hljs-keyword">if</span> (PyObject_IS_GC(op)) {
+        <span class="hljs-keyword">if</span> (IS_TENTATIVELY_UNREACHABLE(op)) {
+            PyGC_Head *gc = AS_GC(op);
+            gc_list_move(gc, tolist);
+            _PyGCHead_SET_REFS(gc, GC_REACHABLE);
+        }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+
+<span class="hljs-meta">#<span class="hljs-meta-keyword">define</span> IS_TENTATIVELY_UNREACHABLE(o) ( \
+    _PyGC_REFS(o) == GC_TENTATIVELY_UNREACHABLE)</span>
+</code></pre>
+<p><code>visit_move</code>函数将引用对象还在<code>unreachable</code>链表的对象移到<code>finalizers</code>链表中。</p>
+<p>[2] 统计<code>unreachable</code>链表数量。<br>
+[3] 处理弱引用。<br>
+[4] [5] 开始清除垃圾对象，我们先只看<code>delete_garbage</code>函数：</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_33">Copy</div><code class="language-c hljs" id="copy_target_33"><span class="hljs-comment">/* Break reference cycles by clearing the containers involved.  This is
+ * tricky business as the lists can be changing and we don't know which
+ * objects may be freed.  It is possible I screwed something up here.
+ */</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span>
+<span class="hljs-title">delete_garbage</span><span class="hljs-params">(PyGC_Head *collectable, PyGC_Head *old)</span>
+</span>{
+    inquiry clear;
+
+    <span class="hljs-keyword">while</span> (!gc_list_is_empty(collectable)) {
+        PyGC_Head *gc = collectable-&gt;gc.gc_next;
+        PyObject *op = FROM_GC(gc);
+
+        <span class="hljs-keyword">if</span> (_PyRuntime.gc.debug &amp; DEBUG_SAVEALL) {
+            PyList_Append(_PyRuntime.gc.garbage, op);
+        }
+        <span class="hljs-keyword">else</span> {
+            <span class="hljs-keyword">if</span> ((clear = Py_TYPE(op)-&gt;tp_clear) != <span class="hljs-literal">NULL</span>) {
+                Py_INCREF(op);
+                clear(op);
+                Py_DECREF(op);
+            }
+        }
+        <span class="hljs-keyword">if</span> (collectable-&gt;gc.gc_next == gc) {
+            <span class="hljs-comment">/* object is still alive, move it, it may die later */</span>
+            gc_list_move(gc, old);
+            _PyGCHead_SET_REFS(gc, GC_REACHABLE);
+        }
+    }
+}
+</code></pre>
+<p>遍历<code>unreachable</code>链表中的container对象，调用其类型对象的<code>tp_clear</code>指针指向的函数，我们以list对象为例：</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_34">Copy</div><code class="language-c hljs" id="copy_target_34"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span>
+_list_clear(PyListObject *a)
+{
+    Py_ssize_t i;
+    PyObject **item = a-&gt;ob_item;
+    <span class="hljs-keyword">if</span> (item != <span class="hljs-literal">NULL</span>) {
+        <span class="hljs-comment">/* Because XDECREF can recursively invoke operations on
+           this list, we make it empty first. */</span>
+        i = Py_SIZE(a);
+        Py_SIZE(a) = <span class="hljs-number">0</span>;
+        a-&gt;ob_item = <span class="hljs-literal">NULL</span>;
+        a-&gt;allocated = <span class="hljs-number">0</span>;
+        <span class="hljs-keyword">while</span> (--i &gt;= <span class="hljs-number">0</span>) {
+            Py_XDECREF(item[i]);
+        }
+        PyMem_FREE(item);
+    }
+    <span class="hljs-comment">/* Never fails; the return value can be ignored.
+       Note that there is no guarantee that the list is actually empty
+       at this point, because XDECREF may have populated it again! */</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+</code></pre>
+<p><code>_list_clear</code>函数对container对象的每个元素进行引用数减量操作并释放container对象内存。</p>
+<p><code>delete_garbage</code>在对container对象进行<code>clear</code>操作之后，还会检查是否成功，如果该container对象没有从<code>unreachable</code>链表上摘除，表示container对象还不能销毁，需要放回到老一“代”中，并标记<code>GC_REACHABLE</code>。</p>
+<p>[6] 统计<code>finalizers</code>链表数量。<br>
+[7] 处理<code>finalizers</code>链表的对象。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_35">Copy</div><code class="language-c hljs" id="copy_target_35"><span class="hljs-comment">/* Handle uncollectable garbage (cycles with tp_del slots, and stuff reachable
+ * only from such cycles).
+ * If DEBUG_SAVEALL, all objects in finalizers are appended to the module
+ * garbage list (a Python list), else only the objects in finalizers with
+ * __del__ methods are appended to garbage.  All objects in finalizers are
+ * merged into the old list regardless.
+ * Returns 0 if all OK, &lt;0 on error (out of memory to grow the garbage list).
+ * The finalizers list is made empty on a successful return.
+ */</span>
+<span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span>
+<span class="hljs-title">handle_legacy_finalizers</span><span class="hljs-params">(PyGC_Head *finalizers, PyGC_Head *old)</span>
+</span>{
+    PyGC_Head *gc = finalizers-&gt;gc.gc_next;
+
+    <span class="hljs-keyword">if</span> (_PyRuntime.gc.garbage == <span class="hljs-literal">NULL</span>) {
+        _PyRuntime.gc.garbage = PyList_New(<span class="hljs-number">0</span>);
+        <span class="hljs-keyword">if</span> (_PyRuntime.gc.garbage == <span class="hljs-literal">NULL</span>)
+            Py_FatalError(<span class="hljs-string">"gc couldn't create gc.garbage list"</span>);
+    }
+    <span class="hljs-keyword">for</span> (; gc != finalizers; gc = gc-&gt;gc.gc_next) {
+        PyObject *op = FROM_GC(gc);
+
+        <span class="hljs-keyword">if</span> ((_PyRuntime.gc.debug &amp; DEBUG_SAVEALL) || has_legacy_finalizer(op)) {
+            <span class="hljs-keyword">if</span> (PyList_Append(_PyRuntime.gc.garbage, op) &lt; <span class="hljs-number">0</span>)
+                <span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;
+        }
+    }
+
+    gc_list_merge(finalizers, old);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+</code></pre>
+<p>遍历<code>finalizers</code>链表，将拥有finalizer的实例对象放到一个名为garbage的PyListObject对象中，可以通过gc模块查看。</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_36">Copy</div><code class="language-powershell hljs" id="copy_target_36">&gt;&gt;&gt; import <span class="hljs-built_in">gc</span>
+&gt;&gt;&gt; gc.garbage
+</code></pre>
+<p>并把<code>finalizers</code>链表晋升到老一“代”。</p>
+<blockquote>
+<p><strong>注意：<code>__del__</code>给gc带来的影响, gc模块唯一处理不了的是循环引用的类都有<code>__del__</code>方法，所以项目中要避免定义<code>__del__</code>方法</strong> <a href="https://docs.python.org/zh-cn/3/reference/datamodel.html#object.__del__" target="_blank">官方警告</a></p>
+</blockquote>
+<h3 id="2200798289">3.4 小结<a href="https://www.cnblogs.com/panlq/p/13096942.html#2200798289" class="esa-anchor">#</a></h3>
+<ol>
+<li>
+<p>GC的流程:</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_37">Copy</div><code class="hljs diff" id="copy_target_37"><span class="hljs-deletion">-&gt; 发现超过阈值了</span>
+<span class="hljs-deletion">-&gt; 触发垃圾回收</span>
+<span class="hljs-deletion">-&gt; 将所有可达对象链表放到一起</span>
+<span class="hljs-deletion">-&gt; 遍历, 计算有效引用计数</span>
+<span class="hljs-deletion">-&gt; 分成 有效引用计数=0 和 有效引用计数 &gt; 0 两个集合</span>
+<span class="hljs-deletion">-&gt; 大于0的, 放入到更老一代</span>
+<span class="hljs-deletion">-&gt; =0的, 执行回收</span>
+<span class="hljs-deletion">-&gt; 回收遍历容器内的各个元素, 减掉对应元素引用计数(破掉循环引用)</span>
+<span class="hljs-deletion">-&gt; 执行-1的逻辑, 若发现对象引用计数=0, 触发内存回收</span>
+<span class="hljs-deletion">-&gt; 由python底层内存管理机制回收内存</span>
+</code></pre>
+</li>
+<li>
+<p>触发GC的条件</p>
+<ul>
+<li>
+<p>主动调用<code>gc.collect(),</code></p>
+</li>
+<li>
+<p>当gc模块的计数器达到阀值的时候</p>
+</li>
+<li>
+<p>程序退出的时候</p>
+</li>
+</ul>
+</li>
+</ol>
+<h2 id="2291615233">4. GC阈值<a href="https://www.cnblogs.com/panlq/p/13096942.html#2291615233" class="esa-anchor">#</a></h2>
+<p><strong>分代回收   以空间换时间</strong></p>
+<blockquote>
+<p><strong>重要思想</strong>：将系统中的所有内存块根据其存活的时间划分为不同的集合, 每个集合就成为一个”代”, 垃圾收集的频率随着”代”的存活时间的增大而减小(活得越长的对象, 就越不可能是垃圾, 就应该减少去收集的频率)</p>
+</blockquote>
+<p><strong>弱代假说</strong></p>
+<p>分代垃圾回收算法的核心行为：垃圾回收器会更频繁的处理新对象。一个新的对象即是你的程序刚刚创建的，而一个来的对象则是经过了几个时间周期之后仍然存在的对象。Python会在当一个对象从零代移动到一代，或是从一代移动到二代的过程中提升<code>(promote)</code>这个对象。</p>
+<p><strong>为什么要这么做？</strong>这种算法的根源来自于弱代假说(<strong>weak generational hypothesis</strong>)。这个假说由两个观点构成：</p>
+<blockquote>
+<p>首先是年亲的对象通常死得也快，而老对象则很有可能存活更长的时间。</p>
+</blockquote>
+<p>假定我们创建了一个Python创建：</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_38">Copy</div><code class="language-python hljs" id="copy_target_38">n1 = Node(<span class="hljs-string">"ABC"</span>)
+</code></pre>
+<p>根据假说，我的代码很可能仅仅会使用ABC很短的时间。这个对象也许仅仅只是一个方法中的中间结果，并且随着方法的返回这个对象就将变成垃圾了。大部分的新对象都是如此般地很快变成垃圾。然而，偶尔程序会创建一些很重要的，存活时间比较长的对象-例如web应用中的session变量或是配置项。</p>
+<blockquote>
+<p>通过频繁的处理零代链表中的新对象，Python的垃圾收集器将把时间花在更有意义的地方：它处理那些很快就可能变成垃圾的新对象。同时只在很少的时候，当满足阈值的条件，收集器才回去处理那些老变量。</p>
+</blockquote>
+<h2 id="4252725829">5. Python中的gc模块使用<a href="https://www.cnblogs.com/panlq/p/13096942.html#4252725829" class="esa-anchor">#</a></h2>
+<blockquote>
+<p>gc模块默认是开启自动回收垃圾的，<code>gc.isenabled()=True</code></p>
+</blockquote>
+<p><strong>常用函数:</strong></p>
+<ul>
+<li><code>gc.set_debug(flags)</code> 设置gc的debug日志，一般设置为<code>gc.DEBUG_LEAK</code></li>
+</ul>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_39">Copy</div><code class="language-python hljs" id="copy_target_39"><span class="hljs-string">"""
+DEBUG_STATS - 在垃圾收集过程中打印所有统计信息
+DEBUG_COLLECTABLE - 打印发现的可收集对象
+DEBUG_UNCOLLECTABLE - 打印unreachable对象(除了uncollectable对象)
+DEBUG_SAVEALL - 将对象保存到gc.garbage(一个列表)里面，而不是释放它
+DEBUG_LEAK - 对内存泄漏的程序进行debug (everything but STATS).
+    
+"""</span>
+</code></pre>
+<ul>
+<li>
+<p><code>gc.collect([generation])</code> 显式进行垃圾回收，可以输入参数，0代表只检查第一代的对象，1代表检查一，二代的对象，2代表检查一，二，三代的对象，如果不传参数，执行一个full collection，也就是等于传2。 返回不可达（unreachable objects）对象的数目</p>
+</li>
+<li>
+<p><code>gc.get_threshold() </code>获取的gc模块中自动执行垃圾回收的频率</p>
+</li>
+<li>
+<p><code>gc.get_stats()</code>查看每一代的具体信息</p>
+</li>
+<li>
+<p><code>gc.set_threshold(threshold0[, threshold1[, threshold2])</code> 设置自动执行垃圾回收的频率</p>
+</li>
+<li>
+<p><code>gc.get_count() </code>获取当前自动执行垃圾回收的计数器，返回一个长度为3的列表</p>
+<p>例如<strong>(488,3,0)</strong>，其中488是指距离上一次一代垃圾检查，Python分配内存的数目减去释放内存的数目，注意是内存分配，而不是引用计数的增加。</p>
+<p>3是指距离上一次二代垃圾检查，一代垃圾检查的次数，同理，0是指距离上一次三代垃圾检查，二代垃圾检查的次数。</p>
+</li>
+</ul>
+<p><strong>计数器和阈值关系解释：</strong></p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_40">Copy</div><code class="language-python hljs" id="copy_target_40">当计数器从(<span class="hljs-number">699</span>,<span class="hljs-number">3</span>,<span class="hljs-number">0</span>)增加到(<span class="hljs-number">700</span>,<span class="hljs-number">3</span>,<span class="hljs-number">0</span>)，gc模块就会执行gc.collect(<span class="hljs-number">0</span>),即检查一代对象的垃圾，并重置计数器为(<span class="hljs-number">0</span>,<span class="hljs-number">4</span>,<span class="hljs-number">0</span>)
+当计数器从(<span class="hljs-number">699</span>,<span class="hljs-number">9</span>,<span class="hljs-number">0</span>)增加到(<span class="hljs-number">700</span>,<span class="hljs-number">9</span>,<span class="hljs-number">0</span>)，gc模块就会执行gc.collect(<span class="hljs-number">1</span>),即检查一、二代对象的垃圾，并重置计数器为(<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,<span class="hljs-number">1</span>)
+当计数器从(<span class="hljs-number">699</span>,<span class="hljs-number">9</span>,<span class="hljs-number">9</span>)增加到(<span class="hljs-number">700</span>,<span class="hljs-number">9</span>,<span class="hljs-number">9</span>)，gc模块就会执行gc.collect(<span class="hljs-number">2</span>),即检查一、二、三代对象的垃圾，并重置计数器为(<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,<span class="hljs-number">0</span>)
+</code></pre>
+<h2 id="2149413205">6. 工作中如何避免循环引用？<a href="https://www.cnblogs.com/panlq/p/13096942.html#2149413205" class="esa-anchor">#</a></h2>
+<blockquote>
+<p>To avoid circular references in your code, you can use weak references, that are implemented in the <code>weakref</code> module. Unlike the usual references, the <code>weakref.ref</code> doesn't increase the reference count and returns <code>None</code> if an object was destroyed. <a href="https://rushter.com/blog/python-garbage-collector/" target="_blank">rushter</a></p>
+</blockquote>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_41">Copy</div><code class="language-python hljs" id="copy_target_41"><span class="hljs-keyword">import</span> weakref
+
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Node</span>():</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span>(<span class="hljs-params">self, value</span>):</span>
+        self.value = value
+        self._parent = <span class="hljs-literal">None</span>
+        self.children = []
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__repr__</span>(<span class="hljs-params">self</span>):</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-string">'Node({!r:})'</span>.<span class="hljs-built_in">format</span>(self.value)
+
+<span class="hljs-meta">    @property</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">parent</span>(<span class="hljs-params">self</span>):</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">None</span> <span class="hljs-keyword">if</span> self._parent <span class="hljs-keyword">is</span> <span class="hljs-literal">None</span> <span class="hljs-keyword">else</span> self._parent()
+
+<span class="hljs-meta">    @parent.setter</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">parent</span>(<span class="hljs-params">self, node</span>):</span>
+        self._parent = weakref.ref(node)
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">add_child</span>(<span class="hljs-params">self, child</span>):</span>
+        self.children.append(child)
+        child.parent = self
+
+
+<span class="hljs-keyword">if</span> __name__ == <span class="hljs-string">'__main__'</span>:
+
+    a = Data()
+    <span class="hljs-keyword">del</span> a
+
+    a = Node()
+    <span class="hljs-keyword">del</span> a
+
+    a = Node()
+    a.add_child(Node())
+    <span class="hljs-keyword">del</span> a
+</code></pre>
+<blockquote>
+<p>弱引用消除了引用循环的这个问题，本质来讲，<strong>弱引用就是一个对象指针，它不会增加它的引用计数</strong></p>
+</blockquote>
+<blockquote>
+<p>弱引用的主要用途是实现保存大对象的高速缓存或映射，但又并希望大对象仅仅因为它出现在高速缓存或映射中而保持存活</p>
+</blockquote>
+<p>为了访问弱引用所引用的对象，你可以像函数一样去调用它即可。如果那个对象还存在就会返回它，否则就返回一个None。 由于原始对象的引用计数没有增加，那么就可以去删除它了</p>
+<p>并非所有对象都可以被弱引用；可以被弱引用的对象包括类实例，用 Python（而不是用 C）编写的函数，实例方法、集合、冻结集合，某些 <a href="https://docs.python.org/zh-cn/3/glossary.html#term-file-object" target="_blank">文件对象</a>，<a href="https://docs.python.org/zh-cn/3/glossary.html#term-generator" target="_blank">生成器</a>，类型对象，套接字，数组，双端队列，正则表达式模式对象以及代码对象等。</p>
+<p>几个内建类型如 <a href="https://docs.python.org/zh-cn/3/library/stdtypes.html#list" target="_blank"><code>list</code></a> 和 <a href="https://docs.python.org/zh-cn/3/library/stdtypes.html#dict" target="_blank"><code>dict</code></a> 不直接支持弱引用，但可以通过子类化添加支持:</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_42">Copy</div><code class="hljs kotlin" id="copy_target_42"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Dict</span></span>(dict):
+    pass
+
+obj = Dict(red=<span class="hljs-number">1</span>, green=<span class="hljs-number">2</span>, blue=<span class="hljs-number">3</span>)   # <span class="hljs-keyword">this</span> <span class="hljs-keyword">object</span> <span class="hljs-keyword">is</span> weak referenceable
+</code></pre>
+<p>其他内置类型例如 <a href="https://docs.python.org/zh-cn/3/library/stdtypes.html#tuple" target="_blank"><code>tuple</code></a> 和 <a href="https://docs.python.org/zh-cn/3/library/functions.html#int" target="_blank"><code>int</code></a> 不支持弱引用，即使通过子类化也不支持</p>
+<p><strong><a href="https://python3-cookbook.readthedocs.io/zh_CN/latest/c08/p23_managing_memory_in_cyclic_data_structures.html" target="_blank">python Cookbook 书中推荐弱引用来处理循环引用</a></strong></p>
+<p>假设我们想创建一个类，用它的实例来代表临时目录。 当以下事件中的某一个发生时，这个目录应当与其内容一起被删除：</p>
+<ul>
+<li>对象被作为垃圾回收，</li>
+<li>对象的 <code>remove()</code> 方法被调用，或</li>
+<li>程序退出。</li>
+</ul>
+<p>原本用<code>__del__()</code>方法</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_43">Copy</div><code class="language-python hljs" id="copy_target_43"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TempDir</span>:</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span>(<span class="hljs-params">self</span>):</span>
+        self.name = tempfile.mkdtemp()
+       
+   	<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__remove</span>(<span class="hljs-params">self</span>):</span>
+        <span class="hljs-keyword">if</span> self.name <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span>:
+            shutil.rmtree(self.name)
+            self.name = <span class="hljs-literal">None</span>
+    
+<span class="hljs-meta">    @property</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">removed</span>(<span class="hljs-params">self</span>):</span>
+        <span class="hljs-keyword">return</span> self.name <span class="hljs-keyword">is</span> <span class="hljs-literal">None</span>
+   
+	<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__del__</span>(<span class="hljs-params">self</span>):</span>
+        self.__remove()
+</code></pre>
+<p>更健壮的替代方式可以是定义一个终结器，只引用它所需要的特定函数和对象，而不是获取对整个对象状态的访问权:</p>
+<pre><div data-tips="复制代码" class="esa-clipboard-button" data-clipboard-target="#copy_target_44">Copy</div><code class="language-python hljs" id="copy_target_44"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TempDir</span>:</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span>(<span class="hljs-params">self</span>):</span>
+        self.name = tempfile.mkdtemp()
+        self._finalizer = weakref.finalize(self, shutil.rmtree, self.name)
+       
+   	<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">remove</span>(<span class="hljs-params">self</span>):</span>
+        self._finalizer()
+    
+<span class="hljs-meta">    @property</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">removed</span>(<span class="hljs-params">self</span>):</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">not</span> self._finalizer.alive
+</code></pre>
+<p>像这样定义后，我们的终结器将只接受一个对其完成正确清理目录任务所需细节的引用。 如果对象一直未被作为垃圾回收，终结器仍会在退出时被调用.<a href="https://docs.python.org/zh-cn/3/library/weakref.html#module-weakref" target="_blank">weakref</a></p>
+<p><strong>参考文章和书籍:</strong></p>
+<ol>
+<li><a href="http://patshaughnessy.net/2013/10/24/visualizing-garbage-collection-in-ruby-and-python" target="_blank">visualizing garbage collection in ruby and python</a></li>
+<li><a href="https://github.com/Junnplus/blog/issues/19" target="_blank">膜拜的大佬-Junnplus'blog</a></li>
+<li><a href="http://wklken.me/posts/2015/09/29/python-source-gc.html" target="_blank">wklken前辈</a></li>
+<li><a href="https://pythoninternal.wordpress.com/2014/08/04/the-garbage-collector/" target="_blank">The Garbage Collector</a></li>
+<li><a href="https://rushter.com/blog/python-garbage-collector/" target="_blank">Garbage collection in Python: things you need to know</a></li>
+<li><a href="https://python3-cookbook.readthedocs.io/zh_CN/latest/c08/p23_managing_memory_in_cyclic_data_structures.html" target="_blank">Python-CookBook-循环引用数据结构的内存管理</a></li>
+<li>《python源码剖析》</li>
+<li>Python-3.8.3/Modules/gcmodule.c</li>
+</ol>
+
+</div>
+<div id="MySignature" style="display: block;"><div class="esa-post-signature"> 
+                        <p>作者：
+            JonPan
+        </p> 
+                        <p>出处：<a href="https://www.cnblogs.com/panlq/p/13096942.html">https://www.cnblogs.com/panlq/p/13096942.html</a></p> 
+                        <p>版权：本文采用「<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">署名-非商业性使用-相同方式共享 4.0 国际</a>」知识共享许可协议进行许可。</p> 
+                        <p></p> 
+                    </div></div>
+<div class="clear"></div>
+<div id="blog_post_info_block"><div id="BlogPostCategory">
+    分类: 
+            <a href="https://www.cnblogs.com/panlq/category/1211325.html" target="_blank">Python</a></div>
+<div id="EntryTag">
+    标签: 
+            <a href="https://www.cnblogs.com/panlq/tag/python/">python</a></div>
+
+    <div id="blog_post_info">
+<div id="green_channel">
+        <a href="javascript:void(0);" id="green_channel_digg" onclick="DiggIt(13096942,cb_blogId,1);green_channel_success(this,&#39;谢谢推荐！&#39;);">好文要顶</a>
+        <a id="green_channel_follow" onclick="follow(&#39;fb7898b6-c71b-e511-b908-9dcfd8948a71&#39;);" href="javascript:void(0);">关注我</a>
+    <a id="green_channel_favorite" onclick="AddToWz(cb_entryId);return false;" href="javascript:void(0);">收藏该文</a>
+    <a id="green_channel_weibo" href="javascript:void(0);" title="分享至新浪微博" onclick="ShareToTsina()"><img src="./Python3 源码阅读 - 垃圾回收机制_files/icon_weibo_24.png" alt=""></a>
+    <a id="green_channel_wechat" href="javascript:void(0);" title="分享至微信" onclick="shareOnWechat()"><img src="./Python3 源码阅读 - 垃圾回收机制_files/wechat.png" alt=""></a>
+</div>
+<div id="author_profile">
+    <div id="author_profile_info" class="author_profile_info">
+            <a href="https://home.cnblogs.com/u/panlq/" target="_blank"><img src="./Python3 源码阅读 - 垃圾回收机制_files/20200607172935.png" class="author_avatar" alt=""></a>
+        <div id="author_profile_detail" class="author_profile_info">
+            <a href="https://home.cnblogs.com/u/panlq/">JonPan</a><br>
+            <a href="https://home.cnblogs.com/u/panlq/followees/">关注 - 36</a><br>
+            <a href="https://home.cnblogs.com/u/panlq/followers/">粉丝 - 10</a>
+        </div>
+    </div>
+    <div class="clear"></div>
+    <div id="author_profile_honor"></div>
+    <div id="author_profile_follow">
+                <a href="javascript:void(0);" onclick="follow(&#39;fb7898b6-c71b-e511-b908-9dcfd8948a71&#39;);return false;">+加关注</a>
+    </div>
+</div>
+<div id="div_digg">
+    <div class="diggit" onclick="votePost(13096942,&#39;Digg&#39;)">
+        <span class="diggnum" id="digg_count">1</span>
+    </div>
+    <div class="buryit" onclick="votePost(13096942,&#39;Bury&#39;)">
+        <span class="burynum" id="bury_count">0</span>
+    </div>
+    <div class="clear"></div>
+    <div class="diggword" id="digg_tips">
+    </div>
+</div>
+
+<script type="text/javascript">
+    currentDiggType = 0;
+</script></div>
+    <div class="clear"></div>
+    <div id="post_next_prev">
+
+    <a href="https://www.cnblogs.com/panlq/p/13084363.html" class="p_n_p_prefix">« </a> 上一篇：    <a href="https://www.cnblogs.com/panlq/p/13084363.html" title="发布于 2020-06-10 12:49"> leetcode-165. 比较版本号</a>
+    <br>
+    <a href="https://www.cnblogs.com/panlq/p/13098786.html" class="p_n_p_prefix">» </a> 下一篇：    <a href="https://www.cnblogs.com/panlq/p/13098786.html" title="发布于 2020-06-12 13:07">Redis的内存和实现机制</a>
+
+</div>
+</div>
+            </div>
+            <div class="postDesc">posted @ 
+<span id="post-date">2020-06-12 00:01</span>&nbsp;
+<a href="https://www.cnblogs.com/panlq/">JonPan</a>&nbsp;
+阅读(<span id="post_view_count">327</span>)&nbsp;
+评论(<span id="post_comment_count">0</span>)&nbsp;
+<a href="https://i.cnblogs.com/EditPosts.aspx?postid=13096942" rel="nofollow">编辑</a>&nbsp;
+<a href="javascript:void(0)" onclick="AddToWz(13096942);return false;">收藏</a>&nbsp;
+<a href="javascript:void(0)" onclick="reportManager.report({ currentUserId: &#39;&#39;, targetType: &#39;blogPost&#39;, targetId: &#39;13096942&#39;, targetLink: &#39;https://www.cnblogs.com/panlq/p/13096942.html&#39;, title: &#39;Python3 源码阅读 - 垃圾回收机制&#39; })">举报</a></div>
+        </div>
+	    
+	    
+    </div><!--end: topics 文章、评论容器-->
+</div>
+<script src="./Python3 源码阅读 - 垃圾回收机制_files/highlight.min.js.下载"></script>
+<script>markdown_highlight();</script>
+<script>
+    var allowComments = true, cb_blogId = 416394, cb_blogApp = 'panlq', cb_blogUserGuid = 'fb7898b6-c71b-e511-b908-9dcfd8948a71';
+    var cb_entryId = 13096942, cb_entryCreatedDate = '2020-06-12 00:01', cb_postType = 1;
+    updatePostStats(
+        [cb_entryId],
+        function(id, count) { $("#post_view_count").text(count) },
+        function(id, count) { $("#post_comment_count").text(count) })
+    zoomManager.apply("#cnblogs_post_body img:not(.code_img_closed):not(.code_img_opened)");
+</script>
+<a name="!comments"></a>
+<div id="blog-comments-placeholder"></div>
+<div id="comment_form" class="commentform">
+    <a name="commentform"></a>
+    <div id="divCommentShow"></div>
+    <div id="comment_nav"><span id="span_refresh_tips"></span><a href="javascript:void(0);" onclick="return RefreshCommentList();" id="lnk_RefreshComments" runat="server" clientidmode="Static">刷新评论</a><a href="https://www.cnblogs.com/panlq/p/13096942.html#" onclick="return RefreshPage();">刷新页面</a><a href="https://www.cnblogs.com/panlq/p/13096942.html#top">返回顶部</a></div>
+    <div id="comment_form_container" style="visibility: visible;"><div class="login_tips">
+    登录后才能查看或发表评论，立即 <a rel="nofollow" href="javascript:void(0);" class="underline" onclick="return account.login(&#39;!comments&#39;);">登录</a> 或者
+    <a href="https://www.cnblogs.com/">逛逛</a> 博客园首页
+</div>
+</div>
+    <div class="ad_text_commentbox" id="ad_text_under_commentbox"></div>
+    <div id="ad_t2"><a href="https://brands.cnblogs.com/huawei" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-华为专区&#39;)">【推荐】资料合集 | HarmonyOS从入门到大神学习资料下载合集</a><br><a href="http://www.uccpsoft.com/index.htm" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-ucancode&#39;)">【推荐】大型组态、工控、仿真、CAD\GIS 50万行VC++源码免费下载!</a><br><a href="https://www.aliyun.com/activity/daily/bestoffer?userCode=swh7dvlt" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-阿里云-cps&#39;)">【推荐】阿里云爆品销量榜单出炉，精选爆款产品低至0.55折</a><br><a href="http://www.moojnn.com/?source=bokeyuan" target="_blank" onclick="ga(&#39;send&#39;, &#39;event&#39;, &#39;Link&#39;, &#39;click&#39;, &#39;T2-魔镜&#39;)">【推荐】限时秒杀！国云大数据魔镜，企业级云分析平台</a><br></div>
+    <div id="opt_under_post"></div>
+    <div id="cnblogs_c1" class="under-post-card">
+        <div id="div-gpt-ad-1592365906576-0" style="width: 300px; height: 250px;" data-google-query-id="CImOpMqBh_ECFVSD6QUdC-INwQ"><div id="google_ads_iframe_/1090369/C1_0__container__" style="border: 0pt none;"><iframe id="google_ads_iframe_/1090369/C1_0" title="3rd party ad content" name="google_ads_iframe_/1090369/C1_0" width="300" height="250" scrolling="no" marginwidth="0" marginheight="0" frameborder="0" allow="conversion-measurement &#39;src&#39;" data-google-container-id="1" style="border: 0px; vertical-align: bottom;" data-load-complete="true" src="./Python3 源码阅读 - 垃圾回收机制_files/saved_resource.html"></iframe></div></div>
+    </div>
+    <div id="under_post_card1"><div class="under-post-card"><b>园子动态</b>：<br>· <a href="https://www.cnblogs.com/cmt/p/14585828.html" target="_blank">致园友们的一封检讨书：都是我们的错</a><br>· <a href="https://www.cnblogs.com/cmt/p/14595262.html" target="_blank">数据库实例 CPU 100% 引发全站故障</a><br>· <a href="https://www.cnblogs.com/cmt/p/14217355.html" target="_blank">发起一个开源项目：博客引擎 fluss</a><br></div></div>
+    <div id="cnblogs_c2" class="under-post-card">
+        <div id="div-gpt-ad-1592366332455-0" style="width: 468px; height: 60px;" data-google-query-id="CIqOpMqBh_ECFVSD6QUdC-INwQ"><div id="google_ads_iframe_/1090369/C2_0__container__" style="border: 0pt none;"><iframe id="google_ads_iframe_/1090369/C2_0" title="3rd party ad content" name="google_ads_iframe_/1090369/C2_0" width="468" height="60" scrolling="no" marginwidth="0" marginheight="0" frameborder="0" allow="conversion-measurement &#39;src&#39;" data-google-container-id="2" style="border: 0px; vertical-align: bottom;" data-load-complete="true" src="./Python3 源码阅读 - 垃圾回收机制_files/saved_resource(1).html"></iframe></div></div>
+    </div>
+    <div id="under_post_card2"><div class="itnews under-post-card">
+    <b>最新新闻</b>：
+    <br>
+ ·          <a href="https://news.cnblogs.com/n/695496/" target="_blank">利路修代言、生椰拿铁断货……慢下来的瑞幸活得还挺好？</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695500/" target="_blank">26元就能拨5000个骚扰电话？短信、电话骚扰为什么屡禁不止</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695498/" target="_blank">为什么 iPhone 的原装充电线容易坏？</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695501/" target="_blank">一片红海的手机市场，难以真我的Realme</a>
+        <br>
+ ·          <a href="https://news.cnblogs.com/n/695514/" target="_blank">苹果新系统很鸿蒙！iPad终于能写代码了，iPhone竟成异地恋神器 | WWDC 2021</a>
+        <br>
+    » <a href="https://news.cnblogs.com/" title="IT 新闻" target="_blank">更多新闻...</a>
+</div></div>
+    <div id="HistoryToday" class="under-post-card">
+<b>历史上的今天：</b>
+<br>
+
+2020-06-12    <a href="https://www.cnblogs.com/panlq/p/13096942.html">Python3 源码阅读 - 垃圾回收机制</a>
+    <br>
+</div>
+    <script type="text/javascript">
+       var commentManager = new blogCommentManager();
+       commentManager.renderComments(0);
+       fixPostBody();
+       deliverBigBanner();
+setTimeout(function() { incrementViewCount(cb_entryId); }, 50);       deliverT2();
+       deliverC1C2();
+       loadNewsAndKb();
+       loadBlogSignature();
+LoadPostCategoriesTags(cb_blogId, cb_entryId);       LoadPostInfoBlock(cb_blogId, cb_entryId, cb_blogApp, cb_blogUserGuid);
+       GetPrevNextPost(cb_entryId, cb_blogId, cb_entryCreatedDate, cb_postType);
+       loadOptUnderPost();
+       GetHistoryToday(cb_blogId, cb_blogApp, cb_entryCreatedDate);
+    </script>
+</div>
+
+	</div><!--end: forFlow -->
+	</div><!--end: mainContent 主体内容容器-->
+	<div id="sideBar">
+		<div id="sideBarMain">
+			<div id="sidebar_news" class="newsItem"><!--done-->
+<h3 class="catListTitle">公告</h3>
+
+<div id="blog-news">
+    
+<script type="text/javascript">window['__document_write_ajax_callbacks__']['4']();</script><script type="text/javascript">window['__document_write_ajax_callbacks__']['5']();</script><script>window['__document_write_ajax_callbacks__']['1']();</script>
+<script type="text/javascript">window['__document_write_ajax_callbacks__']['6']();</script><script type="text/javascript">window['__document_write_ajax_callbacks__']['2']();</script>
+    <div id="profile_block">
+        昵称：
+        <a href="https://home.cnblogs.com/u/panlq/">
+            JonPan
+        </a>
+        <br>
+        园龄：
+        <a href="https://home.cnblogs.com/u/panlq/" title="入园时间：2015-06-26">
+            5年11个月
+        </a>
+        <br>
+        粉丝：
+        <a href="https://home.cnblogs.com/u/panlq/followers/">
+            10
+        </a>
+        <br>
+        关注：
+        <a href="https://home.cnblogs.com/u/panlq/followees/">
+            36
+        </a>
+        <div id="p_b_follow">
+<a href="javascript:void(0)" onclick="follow(&#39;fb7898b6-c71b-e511-b908-9dcfd8948a71&#39;)">+加关注</a></div>
+        <script type="text/javascript">window['__document_write_ajax_callbacks__']['7']();</script><script>window['__document_write_ajax_callbacks__']['3']();</script>
+    </div>
+</div>
+
+</div>
+<div id="sidebar_c3"></div>
+			<div id="blog-calendar" style="">
+
+<table id="blogCalendar" class="Cal" cellspacing="0" cellpadding="0" title="Calendar" border="0">
+    <tbody>
+        <tr>
+            <td colspan="7">
+                <table class="CalTitle" cellspacing="0" border="0">
+                    <tbody>
+                        <tr>
+                            <td class="CalNextPrev">
+                                <a href="javascript:void(0);" onclick="loadBlogCalendar(&#39;2021/05/08&#39;); return false;">&lt;</a>
+                            </td>
+                            <td align="center">2021年6月</td>
+                            <td align="right" class="CalNextPrev">
+                                <a href="javascript:void(0);" onclick="loadBlogCalendar(&#39;2021/07/08&#39;); return false;">&gt;</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    <tr>
+        <th class="CalDayHeader" align="center" abbr="日" scope="col">日</th>
+        <th class="CalDayHeader" align="center" abbr="一" scope="col">一</th>
+        <th class="CalDayHeader" align="center" abbr="二" scope="col">二</th>
+        <th class="CalDayHeader" align="center" abbr="三" scope="col">三</th>
+        <th class="CalDayHeader" align="center" abbr="四" scope="col">四</th>
+        <th class="CalDayHeader" align="center" abbr="五" scope="col">五</th>
+        <th class="CalDayHeader" align="center" abbr="六" scope="col">六</th>
+    </tr>
+            <tr>
+                            <td class="CalOtherMonthDay" align="center">30</td>
+                            <td class="CalOtherMonthDay" align="center">31</td>
+                        <td class="" align="center">
+                            1
+                        </td>
+                        <td class="" align="center">
+                            2
+                        </td>
+                        <td class="" align="center">
+                            3
+                        </td>
+                        <td class="" align="center">
+                            4
+                        </td>
+                    <td class="CalWeekendDay" align="center">
+                        5
+                    </td>
+            </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            6
+                        </td>
+                            <td class="" align="center">
+                                7
+                            </td>
+                            <td class="CalTodayDay" align="center">
+                                8
+                            </td>
+                            <td class="" align="center">
+                                9
+                            </td>
+                            <td class="" align="center">
+                                10
+                            </td>
+                            <td class="" align="center">
+                                11
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            12
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            13
+                        </td>
+                            <td class="" align="center">
+                                14
+                            </td>
+                            <td class="" align="center">
+                                15
+                            </td>
+                            <td class="" align="center">
+                                16
+                            </td>
+                            <td class="" align="center">
+                                17
+                            </td>
+                            <td class="" align="center">
+                                18
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            19
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            20
+                        </td>
+                            <td class="" align="center">
+                                21
+                            </td>
+                            <td class="" align="center">
+                                22
+                            </td>
+                            <td class="" align="center">
+                                23
+                            </td>
+                            <td class="" align="center">
+                                24
+                            </td>
+                            <td class="" align="center">
+                                25
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            26
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            27
+                        </td>
+                            <td class="" align="center">
+                                28
+                            </td>
+                            <td class="" align="center">
+                                29
+                            </td>
+                            <td class="" align="center">
+                                30
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                1
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                2
+                            </td>
+                        <td class="CalOtherMonthDay" align="center">
+                            3
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalOtherMonthDay" align="center">
+                            4
+                        </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                5
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                6
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                7
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                8
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                9
+                            </td>
+                        <td class="CalOtherMonthDay" align="center">
+                            10
+                        </td>
+                </tr>
+    </tbody>
+</table></div><script>loadBlogDefaultCalendar();</script>			
+			<div id="leftcontentcontainer">
+				<div id="blog-sidecolumn"><!-- 搜索 -->
+<div id="sidebar_search" class="sidebar-block">
+    
+</div>
+
+<!-- 常用链接 -->
+
+
+<!-- 最新随笔 -->
+
+
+<!-- 我的标签 -->
+<div id="sidebar_toptags" class="sidebar-block"><div class="catListTag">
+<h3 class="catListTitle">我的标签</h3>
+<ul>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/python/">python<span class="tag-count">(23)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/js/">js<span class="tag-count">(5)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/Redis/">Redis<span class="tag-count">(4)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/python%E6%A8%A1%E5%9D%97%E5%AD%A6%E4%B9%A0/">python模块学习<span class="tag-count">(4)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/Bug%E8%AE%B0%E5%BD%95/">Bug记录<span class="tag-count">(4)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/mysql/">mysql<span class="tag-count">(4)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/%E9%9D%A2%E8%AF%95%E9%A2%98/">面试题<span class="tag-count">(3)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/golang/">golang<span class="tag-count">(2)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/Linux/">Linux<span class="tag-count">(2)</span></a>
+        </li>
+        <li>
+            <a href="https://www.cnblogs.com/panlq/tag/leetcode/">leetcode<span class="tag-count">(2)</span></a>
+        </li>
+    <li>
+        <a href="https://www.cnblogs.com/panlq/tag/">更多</a>
+    </li>
+
+</ul>
+</div>
+
+</div>
+
+<!-- 积分与排名 -->
+
+
+<!-- 随笔分类、随笔档案、文章分类、新闻分类、相册、链接 -->
+<div id="sidebar_categories">
+
+    <div id="sidebar_postcategory" class="catListPostCategory sidebar-block">
+        <h3 class="catListTitle">
+            
+随笔分类
+
+
+
+        </h3>
+
+        <ul>
+
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1655874.html" rel="" target="">
+    Golang(1)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1783417.html" rel="" target="">
+    Linux相关内容(3)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1211325.html" rel="" target="">
+    Python(21)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1594314.html" rel="" target="">
+    每日得到记录(8)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1486847.html" rel="" target="">
+    每日一题(3)
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.cnblogs.com/panlq/category/1211324.html" rel="" target="">
+    数据库(5)
+</a>
+ 
+
+                </li>                
+            
+        </ul>
+
+
+    </div>    
+    <div id="sidebar_记录一些前辈的博客，学习" class="catList记录一些前辈的博客，学习 sidebar-block">
+        <h3 class="catListTitle">
+            
+三人行，必有我师
+
+
+
+        </h3>
+
+        <ul>
+
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.xilidou.com/" rel="nofollow noopener noreferrer" target="_blank">
+    阿里-犀利豆
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://vimiix.com/" rel="nofollow noopener noreferrer" target="">
+    vimiix
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="http://jm.taobao.org/" rel="nofollow noopener noreferrer" target="">
+     阿里中间件团队博客
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://draveness.me/golang/docs/part1-prerequisite/ch02-compile/golang-compile-intro/" rel="nofollow noopener noreferrer" target="_blank">
+    Go 语言设计与实现
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://www.kingname.info/" rel="nofollow noopener noreferrer" target="">
+    谢乾坤 | Kingname
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="http://draveness.me/" rel="nofollow noopener noreferrer" target="">
+    面向信仰编程-优质Go文章
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://tech.meituan.com/" rel="nofollow noopener noreferrer" target="">
+    美团技术团队
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://juejin.im/post/5e9da97ff265da47da2ae848#heading-14" rel="nofollow noopener noreferrer" target="">
+    微爱CTO-张铁蕾
+</a>
+ 
+
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    
+<a href="https://my.oschina.net/jxcdwangtao" rel="nofollow noopener noreferrer" target="">
+    西电王涛
+</a>
+ 
+
+                </li>                
+            
+        </ul>
+
+
+    </div>    
+</div>
+
+<!-- 最新评论 -->
+<div id="sidebar_recentcomments" class="sidebar-block"><div class="catListComment">
+<h3 class="catListTitle">最新评论</h3>
+
+	<div class="RecentCommentBlock">
+        <ul>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/panlq/p/13704965.html">1. Re:WSL2 配置及ubuntu18.04安装mysql8.0+</a></li>
+                    <li class="recent_comment_body"><p>你好，我想问一下，既然使用sudo apt install mysql-server，为什么要先配置mysql-apt-config?</p>
+</li>
+                    <li class="recent_comment_author">--junjiezhou</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/panlq/p/10642725.html">2. Re:nginx+uwsgi+flask+supervisor 项目部署</a></li>
+                    <li class="recent_comment_body"><p>手动点赞</p>
+</li>
+                    <li class="recent_comment_author">--南风生生</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/panlq/p/13369842.html">3. Re:Flask前后端分离项目案例</a></li>
+                    <li class="recent_comment_body"><p>@拥剑公子<br>
+文中有贴项目git<br>
+<a href="https://www.cnblogs.com/panlq/p/13096942.html">项目地址git</a></p>
+</li>
+                    <li class="recent_comment_author">--JonPan</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/panlq/p/13369842.html">4. Re:Flask前后端分离项目案例</a></li>
+                    <li class="recent_comment_body"><p>来个github demo就完美了</p>
+</li>
+                    <li class="recent_comment_author">--拥剑公子</li>
+                    <li class="recent_comment_title"><a href="https://www.cnblogs.com/panlq/p/13266426.html">5. Re:Flask 上下文机制和线程隔离</a></li>
+                    <li class="recent_comment_body">@伊贺双刀流 当一个请求过来的时候，在请求上下文被入栈之前，会判断当前的环境是否有AppContext ， 如果没有就获取一个，（current_app是Flask应用的代理对象，是与当前线程或协程隐...</li>
+                    <li class="recent_comment_author">--JonPan</li>
+        </ul>
+    </div>
+</div>
+
+</div>
+
+
+<!-- 阅读排行榜 -->
+<div id="sidebar_topviewedposts" class="sidebar-block"><div class="catListView">
+<h3 class="catListTitle">阅读排行榜</h3>
+	<div id="TopViewPostsBlock">
+        <ul style="word-break:break-all">
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/9307203.html">
+                            1. 斐波那契数列的5种python实现写法(131285)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/8868108.html">
+                            2. 解决-Django使用filter过滤时间，无法获取月份的问题(4077)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/13369842.html">
+                            3. Flask前后端分离项目案例(1992)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/13704965.html">
+                            4. WSL2 配置及ubuntu18.04安装mysql8.0+(1916)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/9058247.html">
+                            5. python爬虫练习 -- 签名器+GUI界面（Tkinter）(1731)
+                        </a>
+                    </li>
+        </ul>
+    </div>
+</div>
+
+</div>
+
+<!-- 评论排行榜 -->
+<div id="sidebar_topcommentedposts" class="sidebar-block"><div class="catListFeedback">
+<h3 class="catListTitle">评论排行榜</h3>
+	<div id="TopFeedbackPostsBlock">
+        <ul style="word-break:break-all">
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/13266426.html">
+                            1. Flask 上下文机制和线程隔离(7)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/9307203.html">
+                            2. 斐波那契数列的5种python实现写法(7)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/13369842.html">
+                            3. Flask前后端分离项目案例(2)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/10642725.html">
+                            4. nginx+uwsgi+flask+supervisor 项目部署(2)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/panlq/p/13704965.html">
+                            5. WSL2 配置及ubuntu18.04安装mysql8.0+(1)
+                        </a>
+                    </li>
+        </ul>
+    </div>
+</div>
+
+</div>
+
+<!-- 推荐排行榜 -->
+<div id="sidebar_topdiggedposts" class="sidebar-block">
+<div id="topdigg_posts_wrap">
+    <div class="catListView">
+        <h3 class="catListTitle">推荐排行榜</h3>
+        <div id="TopDiggPostsBlock">
+            <ul style="word-break: break-all">
+                        <li>
+                            <a href="https://www.cnblogs.com/panlq/p/13180589.html">
+                                1. 深入理解进程，线程，协程(4)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/panlq/p/13430903.html">
+                                2. 数据结构中的树(二叉树、二叉搜索树、AVL树)(3)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/panlq/p/9307203.html">
+                                3. 斐波那契数列的5种python实现写法(3)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/panlq/p/13704965.html">
+                                4. WSL2 配置及ubuntu18.04安装mysql8.0+(1)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/panlq/p/13266426.html">
+                                5. Flask 上下文机制和线程隔离(1)
+                            </a>
+                        </li>
+            </ul>
+        </div>
+    </div>
+</div></div></div>
+                    <script>loadBlogSideColumn();</script>
+			</div>			
+		</div><!--end: sideBarMain -->
+	</div><!--end: sideBar 侧边栏容器 -->
+	<div class="clear"></div>
+	</div><!--end: main -->
+	<div class="clear"></div>
+	<div id="footer">
+		<!--done-->
+Copyright © 2021 JonPan
+<br><span id="poweredby">Powered by .NET 5.0 on Kubernetes</span>
+
+
+
+	<span class="esa-copyright">&amp; Theme <a href="https://github.com/esofar/cnblogs-theme-silence" target="_blank">Silence v2.0.2</a></span></div><!--end: footer -->
+</div><!--end: home 自定义的最大容器 -->
+
+
+    
+
+    <input type="hidden" id="antiforgery_token" value="CfDJ8L-rpLgFVEJMgssCVvNUAjt-_EuQN40qd6HPzhEoXyqwp6qmfwjARluUy7OsikuguCnMAzjv9aIDDiQsmnH5PXpmgbtEt225nWMEkhMEhnHUKzaf_NKNzTc4HsuMh7ArsMqkj3CAOPESJMoGA6TMI7o">
+
+
+<script type="text/javascript">
+    $.silence({
+        avatar: 'https://images.cnblogs.com/cnblogs_com/panlq/1629174/o_200119155214avatar2.jpg',
+        favicon: 'https://images.cnblogs.com/cnblogs_com/panlq/1629174/o_200119145814favicon.png',
+        navigation: [
+            {
+                title: '标签',
+                url: 'https://www.cnblogs.com/panlq/tag/'
+            },
+            {
+                title: '归档',
+                url: 'https://www.cnblogs.com/panlq/p/'
+            },
+            {
+                title: '每日一题',
+                url: 'https://www.cnblogs.com/panlq/category/1486847.html',
+            },
+            {
+                title: '导航',
+                chilren: [
+                    {
+                        title: '好物优选',
+                        url: 'http://hwyx.91sq.cc/',
+                    }
+                ]
+            },
+        ],
+        catalog: {
+            enable: true,
+            move: true,
+            index: true,
+            level1: 'h2',
+            level2: 'h3',
+            level3: 'h4',
+        },
+        signature: {
+            enable: true,
+            license: '署名-非商业性使用-相同方式共享 4.0 国际',
+            link: 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
+            remark: null
+        },
+        sponsor: {
+            enable: false,
+            paypal: null,
+            wechat: 'https://images.cnblogs.com/cnblogs_com/panlq/1629174/o_200119150653zsm.jpg',
+            alipay: 'https://images.cnblogs.com/cnblogs_com/panlq/1629174/o_200119150701zfb2.jpgh'
+        },
+        github: {
+            enable: true,
+            link: 'https://github.com/Panlq',
+	    target: '_self'
+        }
+    });
+</script><a href="https://github.com/Panlq" class="github-corner" title="Fork me on GitHub" target="_self">
+                        <svg width="60" height="60" viewBox="0 0 250 250" style=" color:#fff; z-index: 999; position: fixed; top: 0; border: 0; left: 0; transform: scale(-1, 1);" aria-hidden="true">
+                            <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+                            <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+                            <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
+                        </svg>
+                    </a><div class="esa-catalog">
+                        <div class="esa-catalog-contents" style="display: block;">
+                            <div class="esa-catalog-title">CONTENTS</div>
+                            <a class="esa-catalog-close">✕</a>
+                        <ul><li class="li_h2" title="1. 引用计数机制">
+                            <i class="1669893080"></i><a class="esa-anchor-link"><span class="level1">1. </span>1. 引用计数机制</a>
+                        </li><li class="li_h3" title="1.1 什么时候触发回收">
+                            <i class="264860042"></i><a class="esa-anchor-link"><span class="level2">1.1. </span>1.1 什么时候触发回收</a>
+                        </li><li class="li_h2" title="2. 常驻内存对象">
+                            <i class="2318339259"></i><a class="esa-anchor-link"><span class="level1">2. </span>2. 常驻内存对象</a>
+                        </li><li class="li_h3" title="2.1 小整数对象池">
+                            <i class="531550804"></i><a class="esa-anchor-link"><span class="level2">2.1. </span>2.1 小整数对象池</a>
+                        </li><li class="li_h3" title="2.2 大整数对象池">
+                            <i class="2288374481"></i><a class="esa-anchor-link"><span class="level2">2.2. </span>2.2 大整数对象池</a>
+                        </li><li class="li_h3" title="2.4 字符串的intern机制">
+                            <i class="4192824434"></i><a class="esa-anchor-link"><span class="level2">2.3. </span>2.4 字符串的intern机制</a>
+                        </li><li class="li_h3" title="2.5 字符缓冲池（单字符）">
+                            <i class="155784491"></i><a class="esa-anchor-link"><span class="level2">2.4. </span>2.5 字符缓冲池（单字符）</a>
+                        </li><li class="li_h3" title="2.6 小结：">
+                            <i class="1123116531"></i><a class="esa-anchor-link"><span class="level2">2.5. </span>2.6 小结：</a>
+                        </li><li class="li_h2" title="3. 标记清除+分代回收">
+                            <i class="841510682"></i><a class="esa-anchor-link"><span class="level1">3. </span>3. 标记清除+分代回收</a>
+                        </li><li class="li_h3" title="3.1 在python中的零代(Generation Zero)">
+                            <i class="152944181"></i><a class="esa-anchor-link"><span class="level2">3.1. </span>3.1 在python中的零代(Generation Zero)</a>
+                        </li><li class="li_h3" title="3.2 标记循环引用">
+                            <i class="3640539562"></i><a class="esa-anchor-link"><span class="level2">3.2. </span>3.2 标记循环引用</a>
+                        </li><li class="li_h3" title="3.3 在源码中摸索答案">
+                            <i class="3398826047"></i><a class="esa-anchor-link"><span class="level2">3.3. </span>3.3 在源码中摸索答案</a>
+                        </li><li class="li_h3" title="3.3.1 标记-清除前的准备">
+                            <i class="2582103402"></i><a class="esa-anchor-link"><span class="level2">3.4. </span>3.3.1 标记-清除前的准备</a>
+                        </li><li class="li_h3" title="3.3.2 垃圾标记">
+                            <i class="1249705633"></i><a class="esa-anchor-link"><span class="level2">3.5. </span>3.3.2 垃圾标记</a>
+                        </li><li class="li_h3" title="3.3.3 垃圾清除">
+                            <i class="2879263896"></i><a class="esa-anchor-link"><span class="level2">3.6. </span>3.3.3 垃圾清除</a>
+                        </li><li class="li_h3" title="3.4 小结">
+                            <i class="2200798289"></i><a class="esa-anchor-link"><span class="level2">3.7. </span>3.4 小结</a>
+                        </li><li class="li_h2" title="4. GC阈值">
+                            <i class="2291615233"></i><a class="esa-anchor-link"><span class="level1">4. </span>4. GC阈值</a>
+                        </li><li class="li_h2" title="5. Python中的gc模块使用">
+                            <i class="4252725829"></i><a class="esa-anchor-link"><span class="level1">5. </span>5. Python中的gc模块使用</a>
+                        </li><li class="li_h2" title="6. 工作中如何避免循环引用？">
+                            <i class="2149413205"></i><a class="esa-anchor-link"><span class="level1">6. </span>6. 工作中如何避免循环引用？</a>
+                        </li></ul></div>
+                    </div><div class="esa-toolbar">
+                <button class="esa-toolbar-gotop" data-tips="返回顶部" style="display: inline-block;"></button>
+                <button class="esa-toolbar-contents" data-tips="阅读目录"></button>
+                <button class="esa-toolbar-follow" data-tips="关注博主"></button>
+            </div><script type="text/javascript">getFollowStatus('fb7898b6-c71b-e511-b908-9dcfd8948a71');</script><div id="lightboxOverlay" tabindex="-1" class="lightboxOverlay" style="display: none;"></div><div id="lightbox" tabindex="-1" class="lightbox" style="display: none;"><div class="lb-outerContainer"><div class="lb-container"><img class="lb-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" alt=""><div class="lb-nav"><a class="lb-prev" aria-label="Previous image" href="https://www.cnblogs.com/panlq/p/13096942.html"></a><a class="lb-next" aria-label="Next image" href="https://www.cnblogs.com/panlq/p/13096942.html"></a></div><div class="lb-loader"><a class="lb-cancel"></a></div></div></div><div class="lb-dataContainer"><div class="lb-data"><div class="lb-details"><span class="lb-caption"></span><span class="lb-number"></span></div><div class="lb-closeContainer"><a class="lb-close"></a></div></div></div></div><iframe id="google_osd_static_frame_9810707845719" name="google_osd_static_frame" style="display: none; width: 0px; height: 0px;" src="./Python3 源码阅读 - 垃圾回收机制_files/saved_resource(2).html"></iframe><iframe src="./Python3 源码阅读 - 垃圾回收机制_files/aframe.html" width="0" height="0" style="display: none;"></iframe></body></html>
